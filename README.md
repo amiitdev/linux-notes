@@ -16,6 +16,7 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 8. [Basic Commands - Files](#8-basic-commands---files)
 9. [Basic Commands - Reading Files](#9-basic-commands---reading-files)
 10. [Getting Help](#10-getting-help)
+11. [File Permissions](#11-file-permissions)
 
 ---
 
@@ -1045,6 +1046,357 @@ $ which ls
 
 ---
 
+## 11. File Permissions
+
+Every file and directory in Linux has permissions that control who can read, write, and execute it.
+
+### Understanding Permission String
+
+When you run `ls -l`, you see a permission string:
+
+```
+$ ls -la perm_demo.txt
+-rw-rw-r-- 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+```
+
+#### Breaking Down the Permission String
+
+```
+-rw-rw-r-- 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+|__________| |_|____|____|
+    |          |     |
+ Permissions  Owner Group
+```
+
+| Position | Meaning |
+|----------|---------|
+| 1st char | File type (`-` = file, `d` = directory, `l` = link) |
+| 2nd-4th chars | **Owner** permissions |
+| 5th-7th chars | **Group** permissions |
+| 8th-10th chars | **Others** permissions |
+
+### The Three Permission Types
+
+| Permission | Symbol | Numeric Value | What it allows |
+|------------|--------|---------------|----------------|
+| Read | `r` | 4 | View file contents, list directory |
+| Write | `w` | 2 | Modify file, create/delete files in directory |
+| Execute | `x` | 1 | Run as program, enter directory |
+| No permission | `-` | 0 | Nothing |
+
+### Real Output - Permission Anatomy
+
+```
+-rw-rw-r-- 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+
+The permission string: -rw-rw-r--
+|   |   |   |
+|   |   |   +-- Others: r-- (read only = 4)
+|   |   +------ Group:  rw- (read+write = 6)
+|   +---------- Owner:  rw- (read+write = 6)
++-------------- Type:   - (regular file)
+```
+
+---
+
+### Three Types of Users
+
+| User Type | Who | Notation |
+|-----------|-----|----------|
+| **Owner (User)** | The person who owns the file | `u` |
+| **Group** | Users who share the group | `g` |
+| **Others** | Everyone else | `o` |
+| **All** | All three combined | `a` |
+
+```
+$ whoami
+amit
+
+$ id
+uid=1000(amit) gid=1000(amit) groups=1000(amit),4(adm),24(cdrom),27(sudo)...
+```
+
+---
+
+### chmod - Change File Permissions
+
+#### Method 1: Symbolic Mode (letters)
+
+| Command | What it does |
+|---------|-------------|
+| `chmod u+x file` | Add execute for **user** |
+| `chmod g+w file` | Add write for **group** |
+| `chmod o=r file` | Set others to read-only |
+| `chmod a+r file` | Add read for **everyone** |
+| `chmod u+rwx,g+rx,o-rwx file` | Mixed permissions |
+
+#### Real Output - Symbolic Mode
+
+```
+$ ls -la perm_demo.txt
+-rw-rw-r-- 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+
+$ chmod u+x perm_demo.txt
+$ ls -la perm_demo.txt
+-rwxrw-r-- 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+
+$ chmod g+w perm_demo.txt
+$ ls -la perm_demo.txt
+-rwxrw-rw- 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+
+$ chmod o=rwx perm_demo.txt
+$ ls -la perm_demo.txt
+-rwxrw-rwx 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+
+$ chmod a-x perm_demo.txt
+$ ls -la perm_demo.txt
+-rw-rw-rw- 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+```
+
+| Symbol | Meaning |
+|--------|---------|
+| `u` | User (owner) |
+| `g` | Group |
+| `o` | Others |
+| `a` | All (u+g+o) |
+| `+` | Add permission |
+| `-` | Remove permission |
+| `=` | Set exact permission |
+
+---
+
+#### Method 2: Numeric Mode (Octal)
+
+Each permission has a number:
+
+| Permission | Number |
+|------------|--------|
+| `r` (read) | 4 |
+| `w` (write) | 2 |
+| `x` (execute) | 1 |
+| `-` (nothing) | 0 |
+
+**How to calculate:** Add the numbers for each user type.
+
+| Permission String | Owner | Group | Others | Numeric |
+|-------------------|-------|-------|--------|---------|
+| `rwxr-xr-x` | rwx (7) | r-x (5) | r-x (5) | **755** |
+| `rw-r--r--` | rw- (6) | r-- (4) | r-- (4) | **644** |
+| `rw-------` | rw- (6) | --- (0) | --- (0) | **600** |
+| `rwxrwxrwx` | rwx (7) | rwx (7) | rwx (7) | **777** |
+| `r--r--r--` | r-- (4) | r-- (4) | r-- (4) | **444** |
+| `rwx------` | rwx (7) | --- (0) | --- (0) | **700** |
+
+#### Real Output - Numeric Mode
+
+```
+$ chmod 755 perm_demo.txt
+$ ls -la perm_demo.txt
+-rwxr-xr-x 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+Owner: rwx (7) | Group: r-x (5) | Others: r-x (5)
+
+$ chmod 644 perm_demo.txt
+$ ls -la perm_demo.txt
+-rw-r--r-- 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+Owner: rw- (6) | Group: r-- (4) | Others: r-- (4)
+
+$ chmod 600 perm_demo.txt
+$ ls -la perm_demo.txt
+-rw------- 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+Owner: rw- (6) | Group: --- (0) | Others: --- (0)
+
+$ chmod 777 perm_demo.txt
+$ ls -la perm_demo.txt
+-rwxrwxrwx 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+Owner: rwx (7) | Group: rwx (7) | Others: rwx (7)
+
+$ chmod 444 perm_demo.txt
+$ ls -la perm_demo.txt
+-r--r--r-- 1 amit amit 5 Sep 21 13:20 perm_demo.txt
+Owner: r-- (4) | Group: r-- (4) | Others: r-- (4)
+```
+
+---
+
+#### Common Permission Sets
+
+| Number | Permission | Use Case |
+|--------|------------|----------|
+| `755` | `rwxr-xr-x` | Scripts, executables, directories |
+| `644` | `rw-r--r--` | Web pages, config files |
+| `600` | `rw-------` | Private files, SSH keys, passwords |
+| `700` | `rwx------` | Private directories |
+| `444` | `r--r--r--` | Read-only files |
+| `777` | `rwxrwxrwx` | **NEVER USE THIS!** |
+
+---
+
+#### Recursive chmod (-R)
+
+Apply permissions to directory and all contents inside:
+
+```
+$ mkdir -p perm_dir/sub && echo "data" > perm_dir/file.txt
+
+$ ls -laR perm_dir/
+perm_dir/:
+-rw-rw-r--  1 amit amit  5 Sep 21 13:20 file.txt
+
+$ chmod -R 755 perm_dir/
+
+$ ls -laR perm_dir/
+perm_dir/:
+-rwxr-xr-x  1 amit amit  5 Sep 21 13:20 file.txt
+```
+
+---
+
+### chown - Change File Owner
+
+**Requires sudo** (only root can change ownership to another user)
+
+#### Syntax
+
+```
+chown user:group file        # Change both
+chown user file              # Change owner only
+chown :group file            # Change group only
+chown -R user:group dir/     # Recursive
+```
+
+#### Real Output
+
+```
+$ ls -la ownership_demo.txt
+-rw-rw-r-- 1 amit amit 5 Sep 21 13:19 ownership_demo.txt
+
+# Change both owner and group (requires sudo)
+$ sudo chown root:root ownership_demo.txt
+$ ls -la ownership_demo.txt
+-rw-rw-r-- 1 root root 5 Sep 21 13:19 ownership_demo.txt
+
+# Change back to amit
+$ sudo chown amit:amit ownership_demo.txt
+$ ls -la ownership_demo.txt
+-rw-rw-r-- 1 amit amit 5 Sep 21 13:19 ownership_demo.txt
+```
+
+---
+
+### chgrp - Change Group
+
+**No sudo needed** if you're a member of the group.
+
+#### Syntax
+
+```
+chgrp group file             # Change group
+chgrp -R group dir/          # Recursive
+```
+
+#### Real Output
+
+```
+$ ls -la chgrp_test.txt
+-rw-rw-r-- 1 amit amit 5 Sep 21 13:21 chgrp_test.txt
+
+$ chgrp adm chgrp_test.txt
+$ ls -la chgrp_test.txt
+-rw-rw-r-- 1 amit adm 5 Sep 21 13:21 chgrp_test.txt
+
+$ chgrp amit chgrp_test.txt
+$ ls -la chgrp_test.txt
+-rw-rw-r-- 1 amit amit 5 Sep 21 13:21 chgrp_test.txt
+```
+
+#### Check Your Groups
+
+```
+$ groups amit
+amit : amit adm cdrom sudo dip plugdev users kvm lpadmin sambashare docker ollama libvirt
+```
+
+---
+
+### chmod vs chown vs chgrp
+
+| Command | What it changes | Needs sudo? |
+|---------|----------------|-------------|
+| `chmod` | Permissions (read/write/execute) | No |
+| `chown` | Owner (and optionally group) | Yes (to change to another user) |
+| `chgrp` | Group only | No (if you're in the group) |
+
+---
+
+### File Type Indicators
+
+| Character | Meaning |
+|-----------|---------|
+| `-` | Regular file |
+| `d` | Directory |
+| `l` | Symbolic link |
+| `c` | Character device |
+| `b` | Block device |
+| `p` | Named pipe (FIFO) |
+| `s` | Socket |
+
+---
+
+### Special Permissions (Advanced)
+
+| Permission | Number | What it does | Example |
+|------------|--------|--------------|---------|
+| SetUID (s) | 4000 | Run as file **owner** | `/usr/bin/passwd` |
+| SetGID (s) | 2000 | Run with file **group** | Shared directories |
+| Sticky bit (t) | 1000 | Only owner can delete | `/tmp` |
+
+```
+$ ls -ld /tmp
+drwxrwxrwt 34 root root 28672 Sep 21 13:20 /tmp
+                                              ^
+                                         Sticky bit (t)
+```
+
+---
+
+### Permission Examples by Use Case
+
+| Use Case | Recommended Permission | Command |
+|----------|----------------------|---------|
+| Shell script | `755` | `chmod 755 script.sh` |
+| Web page | `644` | `chmod 644 index.html` |
+| SSH private key | `600` | `chmod 600 ~/.ssh/id_rsa` |
+| Password file | `600` | `chmod 600 .env` |
+| Shared directory | `775` | `chmod 775 shared/` |
+| Public directory | `755` | `chmod 755 public/` |
+| Config file | `644` | `chmod 644 config.json` |
+| Log file | `640` | `chmod 640 /var/log/app.log` |
+
+---
+
+### Permission Cheat Sheet
+
+```
+Number  Binary  Permission
+------  ------  ----------
+  0     000     --- (nothing)
+  1     001     --x (execute)
+  2     010     -w- (write)
+  3     011     -wx (write+execute)
+  4     100     r-- (read)
+  5     101     r-x (read+execute)
+  6     110     rw- (read+write)
+  7     111     rwx (full)
+
+Common combos:
+  755 = rwxr-xr-x  (executables, directories)
+  644 = rw-r--r--  (regular files)
+  600 = rw-------  (private/sensitive)
+  700 = rwx------  (private directories)
+```
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -1078,6 +1430,10 @@ $ which ls
 | `--help` | Quick help |
 | `man` | Full manual |
 | `info` | Detailed documentation |
+| Permissions | Control who can read/write/execute files |
+| `chmod` | Change file permissions |
+| `chown` | Change file owner |
+| `chgrp` | Change file group |
 
 ---
 
