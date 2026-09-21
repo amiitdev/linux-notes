@@ -19,6 +19,7 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 11. [File Permissions](#11-file-permissions)
 12. [Links](#12-links)
 13. [File Searching](#13-file-searching)
+14. [Text Utilities](#14-text-utilities)
 
 ---
 
@@ -1673,6 +1674,458 @@ git: /usr/bin/git /usr/share/man/man1/git.1.gz
 
 ---
 
+## 14. Text Utilities
+
+Linux has powerful tools for processing text. You can combine them with pipes (`|`) to build complex commands.
+
+### grep - Search Text
+
+Search for patterns in files or output.
+
+```
+$ grep 'apple' sample.txt
+apple
+apple pie
+```
+
+#### Common grep Flags
+
+| Flag | What it does | Example |
+|------|-------------|---------|
+| `-i` | Case insensitive | `grep -i 'apple' file` |
+| `-n` | Show line numbers | `grep -n 'banana' file` |
+| `-c` | Count matches | `grep -c 'cherry' file` |
+| `-v` | Invert (show non-matching) | `grep -v 'apple' file` |
+| `-r` | Search recursively | `grep -r 'error' /var/log/` |
+| `-w` | Whole word match | `grep -w 'apple' file` |
+
+#### Real Output
+
+```
+$ grep -i 'apple' sample.txt
+apple
+apple pie
+ APPLE
+
+$ grep -n 'banana' sample.txt
+2:banana
+5:banana split
+
+$ grep -c 'cherry' sample.txt
+2
+
+$ grep -v 'apple' sample.txt
+banana
+cherry
+banana split
+cherry tart
+ APPLE
+Banana
+CHERRY
+```
+
+#### Regex Patterns
+
+| Pattern | Meaning | Example |
+|---------|---------|---------|
+| `^word` | Starts with | `grep '^a' file` |
+| `word$` | Ends with | `grep 'e$' file` |
+| `.` | Any character | `grep 'a.ple' file` |
+| `[abc]` | Character set | `grep '[ab]' file` |
+| `[0-9]` | Number range | `grep '[0-9]' file` |
+
+```
+$ grep '^a' sample.txt
+apple
+apple pie
+
+$ grep 'e$' sample.txt
+apple
+apple pie
+```
+
+---
+
+### sed - Stream Editor
+
+Find and replace text. Edit files without opening them.
+
+```
+$ sed 's/apple/orange/' sample.txt
+orange
+banana
+cherry
+orange pie
+```
+
+#### Common sed Operations
+
+| Operation | What it does | Example |
+|-----------|-------------|---------|
+| `s/old/new/` | Replace first occurrence | `sed 's/apple/orange/' file` |
+| `s/old/new/g` | Replace ALL occurrences | `sed 's/apple/orange/g' file` |
+| `-i` | Edit file in-place | `sed -i 's/old/new/g' file` |
+| `2,4p` | Print lines 2-4 | `sed -n '2,4p' file` |
+| `3d` | Delete line 3 | `sed '3d' file` |
+| `/^$/d` | Delete blank lines | `sed '/^$/d' file` |
+
+#### Real Output
+
+```
+$ sed 's/apple/orange/' sample.txt
+orange
+banana
+cherry
+orange pie
+banana split
+cherry tart
+
+$ sed -n '2,4p' sample.txt
+banana
+cherry
+apple pie
+
+$ sed '3d' sample.txt
+apple
+banana
+apple pie
+banana split
+cherry tart
+```
+
+#### sed with -i (Edit File In-Place)
+
+```
+$ cp sample.txt sed_test.txt
+
+$ sed -i 's/banana/grape/g' sed_test.txt
+
+$ cat sed_test.txt
+apple
+grape
+cherry
+apple pie
+grape split
+cherry tart
+```
+
+**Warning:** `-i` modifies the original file. Make a backup first!
+
+---
+
+### awk - Pattern Scanning
+
+More powerful than sed. Great for columns and data processing.
+
+```
+$ awk '{print $1}' data.txt
+John
+Sarah
+Mike
+Lisa
+```
+
+#### awk Basics
+
+| Syntax | What it does |
+|--------|-------------|
+| `{print $1}` | Print first column |
+| `{print $1, $3}` | Print columns 1 and 3 |
+| `$2 > 28` | Filter rows where column 2 > 28 |
+| `{print NR, $0}` | Print with line numbers |
+| `-F:` | Set delimiter (default is space) |
+| `{sum+=$2} END {print sum}` | Calculate sum |
+
+#### Real Output
+
+```
+$ cat data.txt
+John 25 Engineer
+Sarah 30 Designer
+Mike 28 Developer
+Lisa 35 Manager
+
+$ awk '{print $1}' data.txt
+John
+Sarah
+Mike
+Lisa
+
+$ awk '{print $1, $3}' data.txt
+John Engineer
+Sarah Designer
+Mike Developer
+Lisa Manager
+
+$ awk '$2 > 28' data.txt
+Sarah 30 Designer
+Lisa 35 Manager
+
+$ awk '{sum+=$2} END {print "Total age:", sum}' data.txt
+Total age: 118
+```
+
+#### awk with Custom Delimiter
+
+```
+$ awk -F: '{print $1}' /etc/passwd | head -5
+root
+daemon
+bin
+sys
+sync
+```
+
+---
+
+### sort - Sort Lines
+
+```
+$ sort fruits.txt
+apple
+apple
+banana
+banana
+cherry
+cherry
+```
+
+#### Common sort Options
+
+| Option | What it does | Example |
+|--------|-------------|---------|
+| (none) | Alphabetical sort | `sort file` |
+| `-r` | Reverse order | `sort -r file` |
+| `-n` | Numeric sort | `sort -n file` |
+| `-u` | Sort + remove duplicates | `sort -u file` |
+| `-k2` | Sort by column 2 | `sort -k2 file` |
+| `-t','` | Set delimiter | `sort -t',' -k2 file` |
+
+#### Real Output
+
+```
+$ sort -r fruits.txt
+cherry
+cherry
+cherry
+banana
+banana
+apple
+apple
+
+$ sort -n
+10
+2
+1
+20
+3
+
+$ sort -k2 -n
+John 25
+Mike 28
+Sarah 30
+Lisa 35
+```
+
+---
+
+### uniq - Remove Duplicates
+
+**Important:** `uniq` only removes ADJACENT duplicates. Always `sort` first!
+
+```
+$ sort fruits.txt | uniq
+apple
+banana
+cherry
+```
+
+#### Common uniq Options
+
+| Option | What it does | Example |
+|--------|-------------|---------|
+| (none) | Remove duplicates | `sort file \| uniq` |
+| `-c` | Count duplicates | `sort file \| uniq -c` |
+| `-d` | Show only duplicates | `sort file \| uniq -d` |
+| `-u` | Show only unique lines | `sort file \| uniq -u` |
+
+#### Real Output
+
+```
+$ sort fruits.txt | uniq -c
+      2 apple
+      2 banana
+      3 cherry
+
+$ sort fruits.txt | uniq -d
+apple
+banana
+cherry
+
+$ sort fruits.txt | uniq -u
+(no output - all items have duplicates)
+```
+
+---
+
+### cut - Extract Columns
+
+Extract specific columns or characters from text.
+
+```
+$ cut -d',' -f1 employees.csv
+John
+Sarah
+Mike
+Lisa
+```
+
+#### Common cut Options
+
+| Option | What it does | Example |
+|--------|-------------|---------|
+| `-d','` | Set delimiter | `cut -d',' -f1 file` |
+| `-f1` | Column 1 | `cut -f1 file` |
+| `-f1,3` | Columns 1 and 3 | `cut -f1,3 file` |
+| `-f2-` | Column 2 to end | `cut -f2- file` |
+| `-c1-5` | Characters 1-5 | `cut -c1-5 file` |
+
+#### Real Output
+
+```
+$ cat employees.csv
+John,25,Engineer,New York
+Sarah,30,Designer,San Francisco
+Mike,28,Developer,Chicago
+Lisa,35,Manager,Boston
+
+$ cut -d',' -f1 employees.csv
+John
+Sarah
+Mike
+Lisa
+
+$ cut -d',' -f1,3 employees.csv
+John,Engineer
+Sarah,Designer
+Mike,Developer
+Lisa,Manager
+
+$ cut -c1-5 employees.csv
+John,
+Sarah
+Mike,
+Lisa,
+```
+
+---
+
+### tr - Translate Characters
+
+Replace, delete, or squeeze characters.
+
+```
+$ echo 'hello world' | tr 'a-z' 'A-Z'
+HELLO WORLD
+```
+
+#### Common tr Operations
+
+| Operation | What it does | Example |
+|-----------|-------------|---------|
+| `'a-z' 'A-Z'` | Lowercase to uppercase | `echo 'hello' \| tr 'a-z' 'A-Z'` |
+| `'l' 'r'` | Replace character | `echo 'hello' \| tr 'l' 'r'` |
+| `-d 'l'` | Delete character | `echo 'hello' \| tr -d 'l'` |
+| `-d ' '` | Remove spaces | `echo 'hello world' \| tr -d ' '` |
+| `-s 'a-z'` | Squeeze repeated chars | `echo 'heeeellllo' \| tr -s 'a-z'` |
+| `':' '\n'` | Replace with newline | `echo 'a:b:c' \| tr ':' '\n'` |
+
+#### Real Output
+
+```
+$ echo 'hello world' | tr 'a-z' 'A-Z'
+HELLO WORLD
+
+$ echo 'hello' | tr 'l' 'r'
+herro
+
+$ echo 'hello' | tr -d 'l'
+heo
+
+$ echo 'hello world' | tr -d ' '
+helloworld
+
+$ echo 'heeeellllooo' | tr -s 'a-z'
+helo
+
+$ echo 'a:b:c:d' | tr ':' '\n'
+a
+b
+c
+d
+```
+
+---
+
+### wc - Word Count
+
+Count lines, words, and characters.
+
+```
+$ wc sample.txt
+ 9 12 76 sample.txt
+```
+
+#### Common wc Options
+
+| Option | What it does | Example |
+|--------|-------------|---------|
+| `-l` | Count lines | `wc -l file` |
+| `-w` | Count words | `wc -w file` |
+| `-c` | Count bytes | `wc -c file` |
+
+#### Real Output
+
+```
+$ wc -l sample.txt
+9 sample.txt
+
+$ wc -w sample.txt
+12 sample.txt
+
+$ wc sample.txt
+ 9 12 76 sample.txt
+ (lines) (words) (bytes)
+```
+
+---
+
+### Text Utilities Cheat Sheet
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `grep` | Search text | `grep 'error' logfile.txt` |
+| `sed` | Find & replace | `sed 's/old/new/g' file` |
+| `awk` | Column processing | `awk '{print $1}' file` |
+| `sort` | Sort lines | `sort file` |
+| `uniq` | Remove duplicates | `sort file \| uniq` |
+| `cut` | Extract columns | `cut -d',' -f1 file` |
+| `tr` | Translate characters | `echo 'hi' \| tr 'a-z' 'A-Z'` |
+| `wc` | Count lines/words | `wc -l file` |
+
+### Common Pipe Combinations
+
+| What you want | Command |
+|---------------|---------|
+| Count unique words | `cat file \| tr ' ' '\n' \| sort \| uniq -c \| sort -rn` |
+| Find top 5 lines | `sort file \| uniq -c \| sort -rn \| head -5` |
+| Remove blank lines | `sed '/^$/d' file` |
+| Convert to uppercase | `cat file \| tr 'a-z' 'A-Z'` |
+| Extract 2nd column | `awk '{print $2}' file` |
+| Count lines matching | `grep -c 'pattern' file` |
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -1716,6 +2169,14 @@ git: /usr/bin/git /usr/share/man/man1/git.1.gz
 | `locate` | Fast search from database |
 | `which` | Find command location |
 | `whereis` | Find binary, source, manual |
+| `grep` | Search text in files |
+| `sed` | Find & replace text |
+| `awk` | Column processing |
+| `sort` | Sort lines |
+| `uniq` | Remove duplicates |
+| `cut` | Extract columns |
+| `tr` | Translate characters |
+| `wc` | Count lines, words, bytes |
 
 ---
 
