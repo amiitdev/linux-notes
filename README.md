@@ -11,6 +11,11 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 3. [Kernel vs OS](#3-kernel-vs-os)
 4. [Linux File System](#4-linux-file-system)
 5. [Absolute vs Relative Paths](#5-absolute-vs-relative-paths)
+6. [Basic Commands - Navigation](#6-basic-commands---navigation)
+7. [Basic Commands - Directories](#7-basic-commands---directories)
+8. [Basic Commands - Files](#8-basic-commands---files)
+9. [Basic Commands - Reading Files](#9-basic-commands---reading-files)
+10. [Getting Help](#10-getting-help)
 
 ---
 
@@ -306,6 +311,740 @@ $ pwd
 
 ---
 
+## 6. Basic Commands - Navigation
+
+### pwd - Print Working Directory
+
+Shows you WHERE you are right now.
+
+```
+$ pwd
+/home/amit
+
+$ cd /etc && pwd
+/etc
+```
+
+| Flag | What it does |
+|------|-------------|
+| `pwd` | Shows current directory |
+
+**Think of it as:** GPS for your terminal - always tells you your location.
+
+---
+
+### ls - List Directory Contents
+
+Shows you WHAT is in a directory.
+
+```
+$ ls
+AGENTS.md    Desktop    Documents    Downloads    Music
+Pictures     Public     Templates    Videos       linux-notes
+```
+
+#### Common ls Flags
+
+| Flag | What it does | Example |
+|------|-------------|---------|
+| `ls` | Simple list | `ls` |
+| `ls -l` | Long format (permissions, size, date) | `ls -l` |
+| `ls -a` | Show hidden files (starts with `.`) | `ls -a` |
+| `ls -la` | Long format + hidden files | `ls -la` |
+| `ls -lh` | Human readable sizes (KB, MB, GB) | `ls -lh` |
+| `ls -lt` | Sort by time (newest first) | `ls -lt` |
+| `ls -lS` | Sort by size (biggest first) | `ls -lS` |
+
+#### Real Output Examples
+
+```
+$ ls -l
+total 25184
+-rw-rw-r--  1 amit amit  130048 Apr 26 10:36 002 - Your First HTML Website.mp4.part
+-rw-rw-r--  1 amit amit    4730 Sep 12 11:37 AGENTS.md
+drwxrwxr-x  5 amit amit     4096 Dec  7  2025 amit-venv
+drwxrwxr-x  3 amit amit     4096 Mar 11  2026 Android
+-rwxr-xr-x  1 amit amit 20441648 Aug 25 21:51 chromedriver
+```
+
+**Reading the long format:**
+```
+-rw-rw-r--  1  amit  amit  20441648  Aug 25 21:51  chromedriver
+|__________|  |_____|_____|_________|______________|____________|
+    |            |      |       |          |              |
+ Permissions  Links  Owner  Group    Size          Name
+```
+
+```
+$ ls -la | head -5
+total 26752
+drwxr-x--- 116 amit    amit    16384 Sep 21 12:04 .
+drwxr-xr-x   3 root    root     4096 Dec 22  2025 ..
+-rw-rw-r--   1 amit    amit   130048 Apr 26 10:36 002 - Your First HTML Website.mp4.part
+-rw-rw-r--   1 amit    amit     4730 Sep 12 11:37 AGENTS.md
+```
+
+```
+$ ls -lh | head -5
+total 25M
+-rw-rw-r--  1 amit amit 127K Apr 26 10:36 002 - Your First HTML Website.mp4.part
+-rw-rw-r--  1 amit amit 4.7K Sep 12 11:37 AGENTS.md
+-rw-rw-r--  1 amit amit  17K Sep 14 09:03 all_packages_backup.txt
+drwxrwxr-x  5 amit amit 4.0K Dec  7  2025 amit-venv
+```
+
+```
+$ ls -lt | head -5
+total 25184
+drwxrwxr-x  3 amit amit     4096 Sep 21 12:01 linux-notes
+-rw-rw-r--  1 amit amit    18308 Sep 21 11:55 opencode.json
+drwxrwxr-x  9 amit amit     4096 Sep 17 19:40 Desktop
+drwxrwxr-x 11 amit amit    12288 Sep 17 16:34 Downloads
+```
+
+```
+$ ls -lS | head -5
+total 25184
+-rwxr-xr-x  1 amit amit 20441648 Aug 25 21:51 chromedriver
+-rw-rw-r--  1 amit amit  2418106 Sep 14 16:03 index.html
+-rw-rw-r--  1 amit amit   490679 Jul 22 11:20 llm-deep-notes-final.png
+-rw-rw-r--  1 amit amit   455174 Jul 22 11:14 llm-notes-preview.png
+```
+
+#### Permission Characters Explained
+
+| Character | Meaning |
+|-----------|---------|
+| `d` | Directory |
+| `-` | Regular file |
+| `r` | Read permission |
+| `w` | Write permission |
+| `x` | Execute permission |
+
+Example: `drwxrwxr-x` means:
+- `d` = directory
+- `rwx` = owner can read, write, execute
+- `rwx` = group can read, write, execute
+- `r-x` = others can read and execute (no write)
+
+---
+
+### cd - Change Directory
+
+Moves you from one directory to another.
+
+```
+$ cd ~ && pwd        # Go to home directory
+/home/amit
+
+$ cd / && pwd        # Go to root directory
+/
+
+$ cd - && pwd        # Go to previous directory
+/home/amit
+
+$ cd ~/linux-notes && pwd   # Go to specific folder
+/home/amit/linux-notes
+
+$ cd .. && pwd       # Go up one level
+/home/amit
+
+$ cd                 # No argument = go home
+/home/amit
+```
+
+| Command | What it does |
+|---------|-------------|
+| `cd` | Go to home directory |
+| `cd ~` | Go to home directory |
+| `cd /` | Go to root |
+| `cd -` | Go to previous directory |
+| `cd ..` | Go up one level |
+| `cd ../..` | Go up two levels |
+| `cd ~/dir` | Go to dir in home |
+
+**Think of it as:** Walking between rooms in a house.
+
+---
+
+## 7. Basic Commands - Directories
+
+### mkdir - Make Directory
+
+Creates new directories (folders).
+
+```
+$ mkdir mydir && ls -la | grep mydir
+drwxrwxr-x  2 amit amit  4096 Sep 21 12:09 mydir
+```
+
+#### mkdir Flags
+
+| Flag | What it does | Example |
+|------|-------------|---------|
+| `mkdir dir` | Create single directory | `mkdir projects` |
+| `mkdir -p a/b/c` | Create nested directories | `mkdir -p projects/web/css` |
+| `mkdir dir1 dir2` | Create multiple directories | `mkdir docs images` |
+
+#### Real Output - Nested Directories
+
+```
+$ mkdir -p a/b/c && ls -R a/
+a/:
+b
+
+a/b/:
+c
+
+a/b/c/:
+(empty)
+```
+
+#### Real Output - Multiple Directories
+
+```
+$ mkdir dir1 dir2 dir3 && ls -la | grep -E "dir[123]"
+drwxrwxr-x  2 amit amit  4096 Sep 21 12:09 dir1
+drwxrwxr-x  2 amit amit  4096 Sep 21 12:09 dir2
+drwxrwxr-x  2 amit amit  4096 Sep 21 12:09 dir3
+```
+
+**Think of it as:** Creating new folders in your file manager.
+
+---
+
+### rmdir - Remove Directory
+
+Deletes **empty** directories only.
+
+```
+$ mkdir empty_dir && rmdir empty_dir && echo "Success"
+Success
+```
+
+#### rmdir vs rm -r
+
+| Command | What it does |
+|---------|-------------|
+| `rmdir dir` | Only works on empty directories |
+| `rm -r dir` | Removes directory AND everything inside |
+
+#### Real Output - rmdir Fails on Non-Empty
+
+```
+$ mkdir nonempty && touch nonempty/file.txt && rmdir nonempty
+rmdir: failed to remove 'nonempty': Directory not empty
+```
+
+#### Real Output - rm -r Force Removes
+
+```
+$ rm -rf nonempty && ls nonempty
+ls: cannot access 'nonempty': No such file or directory
+```
+
+**Warning:** `rm -rf` is powerful and dangerous. It deletes without asking. Double-check before using!
+
+---
+
+## 8. Basic Commands - Files
+
+### touch - Create Empty File / Update Timestamp
+
+```
+$ touch newfile.txt && ls -la newfile.txt
+-rw-rw-r--  1 amit amit  0 Sep 21 12:11 newfile.txt
+```
+
+| Use case | Command |
+|----------|---------|
+| Create empty file | `touch file.txt` |
+| Update timestamp | `touch existing_file.txt` |
+| Create multiple files | `touch a.txt b.txt c.txt` |
+
+**Think of it as:** Creating a blank page, or stamping a file with today's date.
+
+---
+
+### cp - Copy Files and Directories
+
+```
+$ echo "hello" > original.txt && cp original.txt copy.txt && cat copy.txt
+hello
+```
+
+#### Common cp Flags
+
+| Flag | What it does | Example |
+|------|-------------|---------|
+| `cp file dest` | Copy file | `cp notes.txt backup.txt` |
+| `cp file dir/` | Copy to directory | `cp notes.txt backup/` |
+| `cp -r dir/ dest/` | Copy directory recursively | `cp -r project/ backup/` |
+| `cp -i file dest` | Ask before overwrite | `cp -i notes.txt existing.txt` |
+| `cp -v file dest` | Show what's happening | `cp -v notes.txt backup/` |
+
+#### Real Output - cp to Directory
+
+```
+$ mkdir dest && cp original.txt dest/ && ls dest/
+original.txt
+```
+
+#### Real Output - cp -r (Recursive Copy)
+
+```
+$ mkdir -p source/sub && echo "file1" > source/file1.txt
+$ echo "file2" > source/sub/file2.txt
+$ cp -r source copied_dir && ls -R copied_dir
+copied_dir:
+file1.txt
+sub
+
+copied_dir/sub:
+file2.txt
+```
+
+#### Real Output - cp -v (Verbose)
+
+```
+$ cp -v original.txt verbose_copy.txt
+'original.txt' -> 'verbose_copy.txt'
+```
+
+**Think of it as:** Copy-paste in your file manager.
+
+---
+
+### mv - Move or Rename Files
+
+```
+$ echo "test" > oldname.txt && mv oldname.txt newname.txt && ls newname.txt
+newname.txt
+```
+
+#### Common mv Uses
+
+| What you want | Command |
+|---------------|---------|
+| Rename file | `mv oldname.txt newname.txt` |
+| Move to directory | `mv file.txt directory/` |
+| Move + rename | `mv file.txt directory/newname.txt` |
+
+#### Real Output - Rename
+
+```
+$ ls oldname.txt
+oldname.txt
+
+$ mv oldname.txt newname.txt && ls oldname.txt
+ls: cannot access 'oldname.txt': No such file or directory
+
+$ ls newname.txt
+newname.txt
+```
+
+#### Real Output - Move to Directory
+
+```
+$ mkdir archive && mv newname.txt archive/ && ls archive/
+newname.txt
+
+$ ls newname.txt
+ls: cannot access 'newname.txt': No such file or directory
+```
+
+**Think of it as:** Cut-paste, or renaming a file in your file manager.
+
+---
+
+### rm - Remove Files and Directories
+
+```
+$ echo "delete me" > todelete.txt && rm todelete.txt && ls todelete.txt
+ls: cannot access 'todelete.txt': No such file or directory
+```
+
+#### Common rm Flags
+
+| Flag | What it does | Example |
+|------|-------------|---------|
+| `rm file` | Delete file | `rm notes.txt` |
+| `rm -i file` | Ask before delete | `rm -i important.txt` |
+| `rm -v file` | Show what's deleted | `rm -v oldfile.txt` |
+| `rm -r dir` | Delete directory + contents | `rm -r old_project/` |
+| `rm -rf dir` | Force delete (no asking) | `rm -rf old_project/` |
+
+#### Real Output - rm -i (Interactive)
+
+```
+$ echo "careful" > careful.txt && rm -i careful.txt
+rm: remove regular file 'careful.txt'?
+```
+
+#### Real Output - rm -v (Verbose)
+
+```
+$ echo "verbose delete" > verbose_del.txt && rm -v verbose_del.txt
+removed 'verbose_del.txt'
+```
+
+#### Real Output - rm -r (Recursive)
+
+```
+$ mkdir -p todelete_dir/sub && echo "data" > todelete_dir/file.txt
+$ echo "data2" > todelete_dir/sub/file2.txt
+$ ls -R todelete_dir
+todelete_dir:
+file.txt
+sub
+
+todelete_dir/sub:
+file2.txt
+
+$ rm -r todelete_dir && ls todelete_dir
+ls: cannot access 'todelete_dir': No such file or directory
+```
+
+**DANGER ZONE:**
+| Command | Danger Level |
+|---------|-------------|
+| `rm file` | Safe - asks for confirmation |
+| `rm -f file` | Dangerous - no confirmation |
+| `rm -r dir` | Careful - deletes everything |
+| `rm -rf dir` | EXTREME - deletes everything, no asking |
+
+---
+
+## 9. Basic Commands - Reading Files
+
+### cat - Show Entire File
+
+```
+$ cat demo.txt
+Line 1: Hello
+Line 2: World
+Line 3: Linux is fun
+Line 4: Learning commands
+Line 5: Practice makes perfect
+```
+
+#### cat Flags
+
+| Flag | What it does | Example |
+|------|-------------|---------|
+| `cat file` | Show file content | `cat notes.txt` |
+| `cat -n file` | Show with line numbers | `cat -n notes.txt` |
+| `cat -b file` | Number non-blank lines only | `cat -b notes.txt` |
+| `cat -s file` | Squeeze multiple blank lines | `cat -s notes.txt` |
+
+#### Real Output - cat -n (Line Numbers)
+
+```
+$ cat -n demo.txt
+     1  Line 1: Hello
+     2  Line 2: World
+     3  Line 3: Linux is fun
+     4  Line 4: Learning commands
+     5  Line 5: Practice makes perfect
+```
+
+#### Real Output - cat -b (Non-blank Numbers)
+
+```
+$ cat -b blank_demo.txt
+     1  First
+
+     2  Third
+
+     3  Fifth
+```
+
+**Think of it as:** Reading a whole book at once.
+
+---
+
+### head - Show First Lines of File
+
+```
+$ head numbers.txt
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+```
+
+#### head Flags
+
+| Flag | What it does | Example |
+|------|-------------|---------|
+| `head file` | First 10 lines (default) | `head largefile.txt` |
+| `head -5 file` | First 5 lines | `head -5 largefile.txt` |
+| `head -20 file` | First 20 lines | `head -20 largefile.txt` |
+
+#### Real Output
+
+```
+$ head -5 numbers.txt
+1
+2
+3
+4
+5
+```
+
+**Think of it as:** Reading just the first page of a book.
+
+---
+
+### tail - Show Last Lines of File
+
+```
+$ tail numbers.txt
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+```
+
+#### tail Flags
+
+| Flag | What it does | Example |
+|------|-------------|---------|
+| `tail file` | Last 10 lines (default) | `tail largefile.txt` |
+| `tail -5 file` | Last 5 lines | `tail -5 largefile.txt` |
+| `tail -f file` | Follow (watch for new lines) | `tail -f /var/log/syslog` |
+
+#### Real Output
+
+```
+$ tail -5 numbers.txt
+16
+17
+18
+19
+20
+```
+
+**Think of it as:** Reading the last page of a book. `tail -f` is like watching a live news feed.
+
+---
+
+### less - View File Page by Page
+
+```
+$ less demo.txt
+```
+
+| Key | What it does |
+|-----|-------------|
+| `Space` | Next page |
+| `b` | Previous page |
+| `q` | Quit |
+| `/text` | Search for "text" |
+| `n` | Next search result |
+| `N` | Previous search result |
+| `g` | Go to beginning |
+| `G` | Go to end |
+
+**Think of it as:** A comfortable book reader - you can go forward, backward, search, and jump around.
+
+---
+
+### Quick Comparison: cat vs head vs tail vs less
+
+| Command | Best for |
+|---------|----------|
+| `cat` | Small files, or when you want the whole thing |
+| `head` | Peek at the beginning of a file |
+| `tail` | Peek at the end of a file |
+| `tail -f` | Watch a log file in real-time |
+| `less` | Read large files comfortably |
+
+---
+
+## 10. Getting Help
+
+Linux has built-in help systems. You'll never be stuck!
+
+### --help - Quick Help
+
+Most commands have a `--help` flag that shows a summary.
+
+```
+$ ls --help
+Usage: ls [OPTION]... [FILE]...
+List information about the FILEs (the current directory by default).
+Sort entries alphabetically if none of -cftuvSUX nor --sort is specified.
+
+  -a, --all                  do not ignore entries starting with .
+  -A, --almost-all           do not list implied . and ..
+  -l                         use a long listing format
+  -h, --human-readable       with -l, print sizes in human readable format
+  ...
+```
+
+```
+$ mkdir --help
+Usage: mkdir [OPTION]... DIRECTORY...
+Create the DIRECTORY(ies), if they do not already exist.
+
+  -m, --mode=MODE   set file mode (as in chmod)
+  -p, --parents     no error if existing, make parent directories as needed
+  -v, --verbose     print a message for each created directory
+```
+
+| When to use | Command |
+|-------------|---------|
+| Quick reminder of flags | `command --help` |
+| See all options | `command --help` |
+
+---
+
+### man - Manual Pages
+
+The `man` command shows the full manual for any command.
+
+```
+$ man ls
+LS(1)                            User Commands                           LS(1)
+
+NAME
+       ls - list directory contents
+
+SYNOPSIS
+       ls [OPTION]... [FILE]...
+
+DESCRIPTION
+       List information about the FILEs (the current directory by default).
+
+       -a, --all
+              do not ignore entries starting with .
+
+       -A, --almost-all
+              do not list implied . and ..
+       ...
+```
+
+#### man Navigation
+
+| Key | What it does |
+|-----|-------------|
+| `Space` | Next page |
+| `b` | Previous page |
+| `q` | Quit |
+| `/word` | Search for "word" |
+| `n` | Next search result |
+| `N` | Previous search result |
+
+#### man Sections
+
+| Section | Content |
+|---------|---------|
+| 1 | User commands (ls, cp, mv) |
+| 2 | System calls (open, read, write) |
+| 3 | Library functions (printf, malloc) |
+| 4 | Special files (/dev/*) |
+| 5 | File formats (/etc/passwd) |
+| 6 | Games |
+| 7 | Miscellaneous |
+| 8 | System admin commands (mount, fdisk) |
+
+```
+$ man man
+MAN(1)                        Manual pager utils                        MAN(1)
+
+NAME
+       man - an interface to the system reference manuals
+```
+
+---
+
+### info - Detailed Documentation
+
+`info` provides more detailed, hyperlinked documentation.
+
+```
+$ info coreutils
+File: coreutils.info,  Node: Top,  Next: Introduction,  Up: (dir)
+
+GNU Coreutils
+*************
+
+This manual documents version 9.4 of the GNU core utilities, including
+the standard programs for text and file manipulation.
+
+* Menu:
+* Introduction::                 Caveats, overview, and authors
+* Common options::               Common options
+* Output of entire files::       cat tac nl od base32 base64
+* Output of parts of files::     head tail split csummarizing files::            wc sum cksum
+* Basic operations::             cp dd install mv rm shred
+* Special file types::           mkdir rmdir unlink
+* Working context::              pwd stty printenv tty
+```
+
+#### info Navigation
+
+| Key | What it does |
+|-----|-------------|
+| `Space` | Next page |
+| `b` | Previous page |
+| `q` | Quit |
+| `Enter` | Follow a link |
+| `u` | Go up one level |
+
+---
+
+### Other Help Commands
+
+| Command | What it does | Example |
+|---------|-------------|---------|
+| `whatis command` | One-line description | `whatis ls` |
+| `type command` | Shows where command is | `type ls` |
+| `which command` | Shows command path | `which ls` |
+
+#### Real Output
+
+```
+$ whatis ls
+ls (1)               - list directory contents
+
+$ type ls
+ls is /usr/bin/ls
+
+$ which ls
+/usr/bin/ls
+```
+
+---
+
+### Help Comparison Table
+
+| Tool | Best for | Detail level |
+|------|----------|-------------|
+| `--help` | Quick reminder | Low (summary) |
+| `man` | Full reference | High (complete) |
+| `info` | Detailed with links | Highest (tutorial) |
+| `whatis` | Quick description | Very low (one line) |
+| `type` | Find command location | Low |
+| `which` | Find command path | Low |
+
+**Pro tip:** Start with `--help`, use `man` when you need details, and `info` for tutorials.
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -323,6 +1062,22 @@ $ pwd
 | `/opt` | Third-party software |
 | Absolute path | Starts with `/` - exact location |
 | Relative path | Starts from current directory |
+| `pwd` | Shows where you are |
+| `ls` | Shows what's here |
+| `cd` | Move to another directory |
+| `mkdir` | Create directories |
+| `rmdir` | Remove empty directories |
+| `cp` | Copy files/directories |
+| `mv` | Move or rename files |
+| `rm` | Delete files (careful!) |
+| `touch` | Create empty file |
+| `cat` | Show entire file |
+| `head` | Show first lines |
+| `tail` | Show last lines |
+| `less` | Read file page by page |
+| `--help` | Quick help |
+| `man` | Full manual |
+| `info` | Detailed documentation |
 
 ---
 
