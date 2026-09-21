@@ -20,6 +20,7 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 12. [Links](#12-links)
 13. [File Searching](#13-file-searching)
 14. [Text Utilities](#14-text-utilities)
+15. [Redirection and Pipes](#15-redirection-and-pipes)
 
 ---
 
@@ -2126,6 +2127,318 @@ $ wc sample.txt
 
 ---
 
+## 15. Redirection and Pipes
+
+Control where command output goes and how commands connect.
+
+### `>` - Output Redirect (Overwrite)
+
+Send output to a file. **Overwrites** existing content.
+
+```
+$ echo 'hello' > file.txt
+$ cat file.txt
+hello
+
+$ echo 'world' > file.txt
+$ cat file.txt
+world
+```
+
+#### Real Output
+
+```
+$ echo 'hello' > output_demo.txt
+$ cat output_demo.txt
+hello
+
+$ echo 'world' > output_demo.txt
+$ cat output_demo.txt
+world
+```
+
+#### Other Uses
+
+| Command | What it does |
+|---------|-------------|
+| `ls > file.txt` | Save directory listing to file |
+| `echo 'text' > file.txt` | Write text to file |
+| `command > /dev/null` | Discard output (throw it away) |
+
+```
+$ echo 'this goes nowhere' > /dev/null
+$ echo "(output sent to /dev/null - it's gone)"
+```
+
+**Think of it as:** Overwriting a file with new content.
+
+---
+
+### `>>` - Output Redirect (Append)
+
+Send output to a file. **Adds to the end** without overwriting.
+
+```
+$ echo 'line1' > file.txt
+$ cat file.txt
+line1
+
+$ echo 'line2' >> file.txt
+$ cat file.txt
+line1
+line2
+
+$ echo 'line3' >> file.txt
+$ cat file.txt
+line1
+line2
+line3
+```
+
+#### Real Output
+
+```
+$ echo 'line1' > append_demo.txt
+$ echo 'line2' >> append_demo.txt
+$ echo 'line3' >> append_demo.txt
+$ cat append_demo.txt
+line1
+line2
+line3
+```
+
+| Symbol | What it does |
+|--------|-------------|
+| `>` | Overwrite file |
+| `>>` | Append to file |
+
+**Think of it as:** Adding to the end of a document.
+
+---
+
+### `<` - Input Redirect
+
+Feed a file as input to a command.
+
+```
+$ wc -l < file.txt
+3
+
+$ sort < file.txt
+line1
+line2
+line3
+
+$ tr 'a-z' 'A-Z' < file.txt
+LINE1
+LINE2
+LINE3
+```
+
+#### Real Output
+
+```
+$ wc -l < append_demo.txt
+3
+
+$ sort < append_demo.txt
+line1
+line2
+line3
+
+$ tr 'a-z' 'A-Z' < append_demo.txt
+LINE1
+LINE2
+LINE3
+```
+
+**Think of it as:** Feeding a document into a machine for processing.
+
+---
+
+### `|` - Pipe
+
+Send output of one command as input to the next command.
+
+```
+$ echo 'hello world' | tr 'a-z' 'A-Z'
+HELLO WORLD
+
+$ ls / | head -5
+bin
+boot
+cdrom
+Desktop
+dev
+```
+
+#### Real Output
+
+```
+$ echo 'hello world' | tr 'a-z' 'A-Z'
+HELLO WORLD
+
+$ ls / | head -5
+bin
+bin.usr-is-merged
+boot
+cdrom
+Desktop
+```
+
+#### Multi-Pipe Chains
+
+```
+$ echo -e "apple\nbanana\ncherry\napple\nbanana\ncherry\ncherry" | sort | uniq -c | sort -rn
+      3 cherry
+      2 banana
+      2 apple
+```
+
+#### Useful Pipe Combinations
+
+| What you want | Command |
+|---------------|---------|
+| Count lines | `cat file \| wc -l` |
+| Search + count | `grep 'error' file \| wc -l` |
+| Sort + unique | `sort file \| uniq` |
+| Count duplicates | `sort file \| uniq -c \| sort -rn` |
+| Find specific user | `cat /etc/passwd \| grep amit \| cut -d: -f1,6` |
+
+```
+$ cat /etc/passwd | grep amit | cut -d: -f1,6
+amit:/home/amit
+```
+
+**Think of it as:** Connecting machines in an assembly line.
+
+---
+
+### `tee` - Split Output
+
+Show output on screen AND save to file at the same time.
+
+```
+$ ls / | tee tee_demo.txt
+bin
+boot
+cdrom
+Desktop
+...
+
+$ cat tee_demo.txt
+bin
+boot
+cdrom
+Desktop
+...
+```
+
+#### Real Output
+
+```
+$ ls / | tee tee_demo.txt
+bin
+bin.usr-is-merged
+boot
+cdrom
+Desktop
+...
+
+$ cat tee_demo.txt
+bin
+bin.usr-is-merged
+boot
+cdrom
+Desktop
+...
+```
+
+#### tee -a (Append)
+
+```
+$ ls /home | tee -a tee_demo.txt
+amit
+
+$ cat tee_demo.txt
+bin
+boot
+...
+amit
+```
+
+#### Piping with Tee
+
+```
+$ echo -e "a\nb\nc\nd" | tee before_sort.txt | sort | tee after_sort.txt
+a
+b
+c
+d
+
+$ cat before_sort.txt
+a
+b
+c
+d
+
+$ cat after_sort.txt
+a
+b
+c
+d
+```
+
+| Command | What it does |
+|---------|-------------|
+| `command \| tee file` | Show AND save (overwrite) |
+| `command \| tee -a file` | Show AND save (append) |
+| `command \| tee file1 \| tee file2` | Save to multiple files |
+
+**Think of it as:** A splitter that sends output to two places.
+
+---
+
+### Redirection Cheat Sheet
+
+| Symbol | Name | What it does |
+|--------|------|-------------|
+| `>` | Output redirect | Overwrite file |
+| `>>` | Output append | Add to end of file |
+| `<` | Input redirect | Feed file as input |
+| `\|` | Pipe | Connect commands |
+| `2>` | Error redirect | Save error messages |
+| `&>` | All redirect | Save output + errors |
+| `/dev/null` | Black hole | Discard everything |
+
+#### Real Output - Error Redirection
+
+```
+$ ls /nonexistent 2> errors.txt
+$ cat errors.txt
+ls: cannot access '/nonexistent': No such file or directory
+```
+
+---
+
+### How Pipes Work
+
+```
+Command 1  |  Command 2  |  Command 3
+    |              |              |
+    v              v              v
+  Output  --->  Input  --->   Output  --->  Final Result
+```
+
+```
+$ cat /etc/passwd | grep amit | cut -d: -f1,6
+    |               |              |
+    v               v              v
+  Read file    Find "amit"    Extract columns
+```
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -2177,6 +2490,11 @@ $ wc sample.txt
 | `cut` | Extract columns |
 | `tr` | Translate characters |
 | `wc` | Count lines, words, bytes |
+| `>` | Redirect output (overwrite) |
+| `>>` | Redirect output (append) |
+| `<` | Redirect input |
+| `\|` | Pipe output to next command |
+| `tee` | Split output to screen + file |
 
 ---
 
