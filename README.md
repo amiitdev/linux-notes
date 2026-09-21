@@ -17,6 +17,8 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 9. [Basic Commands - Reading Files](#9-basic-commands---reading-files)
 10. [Getting Help](#10-getting-help)
 11. [File Permissions](#11-file-permissions)
+12. [Links](#12-links)
+13. [File Searching](#13-file-searching)
 
 ---
 
@@ -1397,6 +1399,280 @@ Common combos:
 
 ---
 
+## 12. Links
+
+Links let you access the same file from multiple locations.
+
+### Hard Link
+
+A hard link is **another name for the same file**. Both names point to the same data on disk.
+
+```
+$ echo "Hello World" > original.txt && ln original.txt hardlink.txt
+
+$ ls -li original.txt hardlink.txt
+6029788 -rw-rw-r-- 2 amit amit 12 Sep 21 13:35 hardlink.txt
+6029788 -rw-rw-r-- 2 amit amit 12 Sep 21 13:35 original.txt
+```
+
+**Notice:** Same inode number (6029788) = same file on disk.
+
+| Feature | Hard Link |
+|---------|-----------|
+| Command | `ln file link` |
+| Inode | Same as original |
+| Edit one, other changes | Yes |
+| Delete original, link works | Yes |
+| Can link to directories | No |
+| Can link across partitions | No |
+
+#### Real Output - Edit Hard Link
+
+```
+$ echo "Hello Modified" > hardlink.txt && cat original.txt
+Hello Modified
+```
+
+#### Real Output - Delete Original, Hard Link Survives
+
+```
+$ rm original.txt && cat hardlink.txt
+Hello Modified
+```
+
+---
+
+### Soft Link (Symbolic Link)
+
+A soft link is a **shortcut** that points to another file by path.
+
+```
+$ echo "Original Data" > original.txt && ln -s original.txt softlink.txt
+
+$ ls -la original.txt softlink.txt
+-rw-rw-r-- 1 amit amit 14 Sep 21 13:35 original.txt
+lrwxrwxrwx 1 amit amit 12 Sep 21 13:35 softlink.txt -> original.txt
+```
+
+**Notice:** `l` at the start = link. Shows `-> original.txt` (points to original).
+
+| Feature | Soft Link |
+|---------|-----------|
+| Command | `ln -s file link` |
+| Inode | Different from original |
+| Edit one, other changes | Yes |
+| Delete original, link breaks | Yes (becomes broken) |
+| Can link to directories | Yes |
+| Can link across partitions | Yes |
+
+#### Real Output - Read Soft Link
+
+```
+$ cat softlink.txt
+Original Data
+```
+
+#### Real Output - Delete Original, Soft Link Breaks
+
+```
+$ rm original.txt && cat softlink.txt
+cat: softlink.txt: No such file or directory
+```
+
+---
+
+### Hard Link vs Soft Link
+
+| Feature | Hard Link | Soft Link |
+|---------|-----------|-----------|
+| Command | `ln file link` | `ln -s file link` |
+| Inode | Same | Different |
+| Shows in `ls -l` | Normal file | Shows `->` pointer |
+| Delete original | Link still works | Link breaks |
+| Link to directory | Not allowed | Allowed |
+| Cross partition | Not allowed | Allowed |
+
+---
+
+### When to Use Which?
+
+| Use Case | Use |
+|----------|-----|
+| Backup important file | Hard link |
+| Shortcut to file | Soft link |
+| Link to directory | Soft link |
+| Link across drives | Soft link |
+| Shorten long path | Soft link |
+
+---
+
+### System Links You'll See
+
+```
+$ ls -la /usr/bin/python3
+lrwxrwxrwx 1 root root 9 Mar 21  2024 /usr/bin/python3 -> python3.12
+```
+
+This is a soft link - `/usr/bin/python3` points to `/usr/bin/python3.12`.
+
+---
+
+## 13. File Searching
+
+### find - Search by Criteria
+
+The most powerful search tool. Searches in real-time.
+
+```
+$ find search_demo -name 'file.txt'
+search_demo/sub1/sub2/file.txt
+search_demo/sub1/file.txt
+search_demo/file.txt
+```
+
+#### Common find Options
+
+| Option | What it does | Example |
+|--------|-------------|---------|
+| `-name` | Search by name | `find . -name "*.txt"` |
+| `-type f` | Files only | `find . -type f` |
+| `-type d` | Directories only | `find . -type d` |
+| `-size` | By size | `find . -size +1M` |
+| `-mtime` | Modified time | `find . -mtime -7` |
+| `-exec` | Run command on results | `find . -name "*.txt" -exec echo {} \;` |
+
+#### Real Output - Search by Name
+
+```
+$ find search_demo -name '*.txt'
+search_demo/sub1/sub2/file.txt
+search_demo/sub1/file.txt
+search_demo/file.txt
+search_demo/notes.txt
+```
+
+#### Real Output - Files Only
+
+```
+$ find search_demo -type f
+search_demo/sub1/sub2/file.txt
+search_demo/sub1/file.txt
+search_demo/file.txt
+search_demo/notes.txt
+```
+
+#### Real Output - Directories Only
+
+```
+$ find search_demo -type d
+search_demo
+search_demo/sub1
+search_demo/sub1/sub2
+```
+
+#### Real Output - Execute Command on Results
+
+```
+$ find search_demo -name '*.txt' -exec echo "Found: {}" \;
+Found: search_demo/bigfile.txt
+Found: search_demo/sub1/sub2/file.txt
+Found: search_demo/sub1/file.txt
+Found: search_demo/file.txt
+Found: search_demo/notes.txt
+```
+
+---
+
+### locate - Fast Search from Database
+
+Searches from a pre-built database. Much faster than `find`.
+
+```
+$ locate passwd
+/etc/passwd
+/etc/passwd-
+/etc/pam.d/chpasswd
+/etc/pam.d/passwd
+/etc/security/opasswd
+```
+
+| Feature | find | locate |
+|---------|------|--------|
+| Speed | Slow (real-time) | Fast (database) |
+| Freshness | Always current | May be outdated |
+| Flexibility | Very flexible | Limited options |
+| Update | Not needed | `sudo updatedb` |
+
+**Tip:** Run `sudo updatedb` to update the locate database.
+
+---
+
+### which - Find Command Location
+
+Shows where a command is located.
+
+```
+$ which ls
+/usr/bin/ls
+
+$ which python3
+/usr/bin/python3
+
+$ which git
+/usr/bin/git
+
+$ which node
+/home/amit/.nvm/versions/node/v24.19.0/bin/node
+```
+
+**Use when:** You want to know which version of a command you're running.
+
+---
+
+### whereis - Find Binary, Source, Manual
+
+Shows binary, source, and manual page locations.
+
+```
+$ whereis ls
+ls: /usr/bin/ls /usr/share/man/man1/ls.1.gz
+
+$ whereis python3
+python3: /usr/bin/python3 /usr/lib/python3 /etc/python3 /usr/share/python3
+
+$ whereis gcc
+gcc: /usr/bin/gcc /usr/lib/gcc /usr/libexec/gcc /usr/share/gcc
+
+$ whereis git
+git: /usr/bin/git /usr/share/man/man1/git.1.gz
+```
+
+| Output Part | Meaning |
+|-------------|---------|
+| First | Binary location |
+| Second | Source files |
+| Third | Manual pages |
+
+---
+
+### Search Tools Comparison
+
+| Tool | Best for | Speed | Usage |
+|------|----------|-------|-------|
+| `find` | Complex searches | Slow | `find . -name "*.txt"` |
+| `locate` | Quick filename search | Fast | `locate filename` |
+| `which` | Find command path | Instant | `which command` |
+| `whereis` | Find all related files | Instant | `whereis command` |
+
+| When to use | Command |
+|-------------|---------|
+| Find all `.py` files modified today | `find . -name "*.py" -mtime -1` |
+| Quick find a file by name | `locate filename` |
+| Where is `python3` installed? | `which python3` |
+| Find binary + man page for `gcc` | `whereis gcc` |
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -1434,6 +1710,12 @@ Common combos:
 | `chmod` | Change file permissions |
 | `chown` | Change file owner |
 | `chgrp` | Change file group |
+| `ln` | Create hard links |
+| `ln -s` | Create soft (symbolic) links |
+| `find` | Search files by criteria |
+| `locate` | Fast search from database |
+| `which` | Find command location |
+| `whereis` | Find binary, source, manual |
 
 ---
 
