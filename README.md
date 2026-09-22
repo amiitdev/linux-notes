@@ -30,6 +30,7 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 22. [Group Management](#22-group-management)
 23. [Sudo](#23-sudo)
 24. [Disk Management](#24-disk-management)
+25. [Filesystems and Mounting](#25-filesystems-and-mounting)
 
 ---
 
@@ -4117,6 +4118,229 @@ UUID=xxxx-xxxx  /mnt  ext4  defaults  0  2
 
 ---
 
+## 25. Filesystems and Mounting
+
+### Filesystem Types
+
+#### ext4 (Extended 4)
+
+| Feature | Value |
+|---------|-------|
+| Default on | Ubuntu, Linux Mint, Debian |
+| Max file size | 16 TB |
+| Max volume | 1 EB |
+| Journaling | Yes |
+| Snapshots | No |
+| Compression | No |
+
+**Best for:** General purpose, root filesystem, servers
+
+#### xfs (X File System)
+
+| Feature | Value |
+|---------|-------|
+| Default on | RHEL, CentOS, Fedora |
+| Max file size | 8 EB |
+| Max volume | 8 EB |
+| Journaling | Yes |
+| Snapshots | No |
+| Compression | No |
+
+**Best for:** Large files, media servers, high performance
+
+#### btrfs (B-tree File System)
+
+| Feature | Value |
+|---------|-------|
+| Default on | Fedora, openSUSE |
+| Max file size | 16 EB |
+| Journaling | Yes |
+| Snapshots | Yes |
+| Compression | Yes |
+| Checksums | Yes |
+
+**Best for:** NAS, backups, data integrity
+
+#### Comparison Table
+
+| Feature | ext4 | xfs | btrfs |
+|---------|------|-----|-------|
+| Journaling | Yes | Yes | Yes |
+| Snapshots | No | No | Yes |
+| Compression | No | No | Yes |
+| Max file | 16 TB | 8 EB | 16 EB |
+| Performance | Good | Best (large) | Good |
+| Default | Ubuntu/Mint | RHEL/CentOS | Fedora |
+
+#### Your Filesystem
+
+```
+$ df -T
+Filesystem     Type     1K-blocks      Used Available Use% Mounted on
+/dev/nvme0n1p2 ext4     244506940 150863684  81150200  66% /
+/dev/nvme0n1p1 vfat        523248      6288    516960   2% /boot/efi
+```
+
+---
+
+### Filesystem Tools
+
+| Task | Command |
+|------|---------|
+| Show filesystem type | `lsblk -f` or `df -T` |
+| Format as ext4 | `sudo mkfs.ext4 /dev/sdX1` |
+| Format as xfs | `sudo mkfs.xfs /dev/sdX1` |
+| Format as btrfs | `sudo mkfs.btrfs /dev/sdX1` |
+| Check ext4 | `sudo e2fsck /dev/sdX1` |
+| Check xfs | `sudo xfs_repair /dev/sdX1` |
+| Check btrfs | `sudo btrfs check /dev/sdX1` |
+
+---
+
+### mount - Attach Filesystem
+
+Mount a filesystem to a directory.
+
+#### Basic Syntax
+
+```
+sudo mount /dev/sdb1 /mnt           # Mount device to directory
+sudo mount /dev/sdb1 /mnt -o ro     # Mount read-only
+sudo mount -t ext4 /dev/sdb1 /mnt    # Specify filesystem type
+```
+
+#### Common mount Options
+
+| Option | What it does |
+|--------|-------------|
+| `-o ro` | Read-only |
+| `-o rw` | Read-write (default) |
+| `-o noexec` | No execute permission |
+| `-o nosuid` | No setuid bit |
+| `-o loop` | Mount file as loop device |
+| `-t type` | Specify filesystem type |
+
+#### View Current Mounts
+
+```
+$ mount | head -10
+sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)
+proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
+/dev/nvme0n1p2 on / type ext4 (rw,relatime,discard,errors=remount-ro)
+```
+
+---
+
+### umount - Detach Filesystem
+
+Unmount a filesystem.
+
+#### Basic Syntax
+
+```
+umount /mnt                          # Unmount by path
+umount /dev/sdb1                     # Unmount by device
+sudo umount /mnt                     # If permission denied
+umount -l /mnt                       # Lazy unmount (if busy)
+```
+
+#### If "Device is Busy"
+
+```
+fuser -vm /mnt                       # See what's using it
+lsof /mnt                            # See open files
+umount -l /mnt                       # Lazy detach (detaches when free)
+```
+
+---
+
+### /etc/fstab - Automatic Mounting
+
+File that lists filesystems to mount at boot.
+
+#### Format
+
+```
+device  mountpoint  type  options  dump  pass
+```
+
+| Field | Meaning |
+|-------|---------|
+| 1. device | `/dev/sdX`, `UUID=xxx`, or `LABEL=xxx` |
+| 2. mountpoint | Where to mount |
+| 3. type | ext4, xfs, btrfs, vfat, tmpfs |
+| 4. options | defaults, ro, noexec, etc. |
+| 5. dump | 0=backup off, 1=on |
+| 6. pass | 0=no check, 1=first, 2=others |
+
+#### Real fstab Output
+
+```
+$ cat /etc/fstab
+# <file system> <mount point>   <type>  <options>       <dump>  <pass>
+UUID=2391876f-a5f5-4a74-b1a1-2c299f87ebb8 /  ext4  errors=remount-ro,discard 0  1
+UUID=3ADA-D663  /boot/efi       vfat    umask=0077      0       1
+/swapfile        none            swap    sw              0       0
+```
+
+#### Example Entries
+
+```
+# device           mountpoint  type  options     dump pass
+/dev/sdb1          /mnt/data   ext4  defaults    0    2
+UUID=xxxx-xxxx     /home       ext4  defaults    0    2
+UUID=yyyy-yyyy     /boot/efi   vfat  umask=0077  0    1
+none               /tmp        tmpfs defaults    0    0
+```
+
+---
+
+### Mounting Workflow
+
+#### Complete Steps
+
+```
+Step 1: Create partition
+  sudo fdisk /dev/sdb
+
+Step 2: Format
+  sudo mkfs.ext4 /dev/sdb1
+
+Step 3: Create mount point
+  sudo mkdir -p /mnt/data
+
+Step 4: Mount
+  sudo mount /dev/sdb1 /mnt/data
+
+Step 5: Make permanent (add to fstab)
+  sudo blkid /dev/sdb1              # Get UUID
+  sudo nano /etc/fstab              # Add entry
+  UUID=xxxx  /mnt/data  ext4  defaults  0  2
+
+Step 6: Test
+  sudo umount /mnt/data
+  sudo mount -a                     # Test fstab
+```
+
+---
+
+### Mounting Cheat Sheet
+
+| Task | Command |
+|------|---------|
+| See filesystems | `lsblk -f` |
+| See mounted with type | `df -T` |
+| Mount | `sudo mount /dev/sdX /mnt` |
+| Unmount | `sudo umount /mnt` |
+| Mount all from fstab | `sudo mount -a` |
+| View fstab | `cat /etc/fstab` |
+| Get UUID | `sudo blkid /dev/sdX1` |
+| Format ext4 | `sudo mkfs.ext4 /dev/sdX1` |
+| Format xfs | `sudo mkfs.xfs /dev/sdX1` |
+| Format btrfs | `sudo mkfs.btrfs /dev/sdX1` |
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -4205,6 +4429,10 @@ UUID=xxxx-xxxx  /mnt  ext4  defaults  0  2
 | `lsblk` | List block devices |
 | `fdisk` | Partition table editor |
 | `parted` | Advanced partition manager |
+| `mount` | Attach filesystem |
+| `umount` | Detach filesystem |
+| `mkfs.*` | Format filesystem (ext4/xfs/btrfs) |
+| `/etc/fstab` | Auto-mount at boot |
 
 ---
 
