@@ -22,6 +22,8 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 14. [Text Utilities](#14-text-utilities)
 15. [Redirection and Pipes](#15-redirection-and-pipes)
 16. [Process Management](#16-process-management)
+17. [Process Control](#17-process-control)
+18. [System Monitoring](#18-system-monitoring)
 
 ---
 
@@ -2673,6 +2675,423 @@ $ pgrep -f chrome
 
 ---
 
+## 17. Process Control
+
+### kill - Send Signal to Process
+
+Sends a signal to a process to stop or control it.
+
+```
+$ kill PID
+$ kill -9 PID
+```
+
+#### Real Output
+
+```
+$ sleep 300 & TEST_PID=$!
+$ ps -p $TEST_PID -o pid,comm,stat
+    PID COMMAND         STAT
+   8002 sleep           SN
+
+$ kill $TEST_PID
+$ ps -p $TEST_PID
+Process 8002 is gone
+```
+
+#### Common Kill Signals
+
+| Signal | Number | Command | What it does |
+|--------|--------|---------|-------------|
+| SIGTERM | 15 | `kill PID` | Graceful shutdown (default) |
+| SIGKILL | 9 | `kill -9 PID` | Force kill (cannot be blocked) |
+| SIGHUP | 1 | `kill -HUP PID` | Reload configuration |
+| SIGINT | 2 | `Ctrl+C` | Interrupt |
+| SIGSTOP | 19 | `Ctrl+Z` | Pause process |
+
+```
+kill PID          # Send SIGTERM (15) - graceful
+kill -9 PID       # Send SIGKILL (force) - last resort
+kill -HUP PID     # Send SIGHUP - reload config
+kill -l           # List all signals
+```
+
+**When to use:**
+- First try: `kill PID` (graceful)
+- If stuck: `kill -9 PID` (force)
+
+---
+
+### pkill - Kill Process by Name
+
+Kills processes matching a name or pattern.
+
+```
+$ sleep 300 & sleep 300 & sleep 300 &
+$ pgrep sleep
+8013
+8016
+8017
+
+$ pkill sleep
+$ pgrep sleep
+(no output - all killed)
+```
+
+#### Common pkill Options
+
+| Command | What it does |
+|---------|-------------|
+| `pkill name` | Kill by process name |
+| `pkill -f pattern` | Kill by full command line |
+| `pkill -u username` | Kill processes of a user |
+| `pkill -9 name` | Force kill by name |
+| `pkill -f "python.*server"` | Regex pattern match |
+
+```
+pkill nginx              # Kill all nginx processes
+pkill -f "my script"     # Kill matching full command
+pkill -f "python.*server" # Kill python server processes
+pkill -9 firefox         # Force kill firefox
+```
+
+---
+
+### killall - Kill by Exact Name
+
+Kills all processes with an exact name.
+
+```
+$ sleep 300 & sleep 300 & sleep 300 &
+$ pgrep sleep
+8026
+8027
+8028
+
+$ killall sleep
+$ pgrep sleep
+(no output - all killed)
+```
+
+#### pkill vs killall
+
+| Feature | pkill | killall |
+|---------|-------|---------|
+| Match by | Name or pattern | Exact name |
+| Pattern support | Yes (`-f`) | Limited |
+| Partial match | Yes | No |
+| Example | `pkill python` matches `python3`, `python3.12` | `killall python3` matches only `python3` |
+
+---
+
+### Background Jobs
+
+Run commands in the background so you can keep using the terminal.
+
+#### Start Background Job with &
+
+```
+$ sleep 60 &
+[1] 8035
+$ jobs
+[1]  + running    sleep 60
+
+$ jobs -l
+[1]  + 8035 running    sleep 60
+```
+
+#### Job Control Commands
+
+| Command | What it does |
+|---------|-------------|
+| `command &` | Run in background |
+| `jobs` | List background jobs |
+| `jobs -l` | List with PIDs |
+| `fg %1` | Bring job to foreground |
+| `bg %1` | Resume job in background |
+| `kill %1` | Kill job 1 |
+| `Ctrl+Z` | Pause current process |
+| `Ctrl+C` | Kill current process |
+
+#### Workflow Example
+
+```
+$ long_running_command
+^Z                # Press Ctrl+Z to pause
+[1]+ Stopped     long_running_command
+
+$ bg %1           # Resume in background
+[1]+ long_running_command &
+
+$ fg %1           # Bring to foreground
+```
+
+---
+
+### nohup - Process Survives Logout
+
+Run a process that continues even after you close the terminal.
+
+#### Basic Syntax
+
+```
+nohup command > output.log 2>&1 &
+```
+
+| Part | What it does |
+|------|-------------|
+| `nohup` | Ignore hangup signal (survives logout) |
+| `command` | What to run |
+| `> output.log` | Redirect output to file |
+| `2>&1` | Redirect errors to same file |
+| `&` | Run in background |
+
+#### Real Output
+
+```
+$ nohup sleep 300 > /tmp/nohup_test.log 2>&1 &
+PID: 8039
+
+$ ps aux | grep "sleep 300"
+amit  8039  0.0  0.0  8288  1920 ?  SN  15:11  0:00 sleep 300
+```
+
+#### What nohup Does
+
+1. Ignores SIGHUP signal (process survives terminal close)
+2. Redirects output to `nohup.out` (if you don't specify a file)
+3. Process runs until killed manually
+
+#### Common Use Cases
+
+```
+# Run script that survives logout
+nohup python script.py > output.log 2>&1 &
+
+# Run server in background
+nohup ./server > server.log 2>&1 &
+
+# Run long task
+nohup ./backup.sh > backup.log 2>&1 &
+```
+
+#### Kill nohup Process
+
+```
+$ pkill -f "sleep 300"
+$ kill PID
+```
+
+---
+
+### Process Control Cheat Sheet
+
+| Command | Purpose |
+|---------|---------|
+| `kill PID` | Stop process gracefully |
+| `kill -9 PID` | Force stop process |
+| `pkill name` | Stop by name/pattern |
+| `killall name` | Stop by exact name |
+| `command &` | Run in background |
+| `jobs` | List background jobs |
+| `fg %1` | Bring to foreground |
+| `bg %1` | Resume in background |
+| `nohup cmd &` | Run surviving logout |
+| `Ctrl+Z` | Pause current process |
+| `Ctrl+C` | Kill current process |
+
+---
+
+## 18. System Monitoring
+
+### uptime - How Long System Running
+
+Shows system uptime and load average.
+
+```
+$ uptime
+ 15:14:23 up 10 min, 1 user, load average: 2.55, 3.13, 1.92
+```
+
+#### Understanding Load Average
+
+| Value | Meaning |
+|-------|---------|
+| `15:14:23` | Current time |
+| `up 10 min` | System running for 10 minutes |
+| `1 user` | 1 user logged in |
+| `load average: 2.55, 3.13, 1.92` | Load for last 1, 5, 15 minutes |
+
+**Load average interpretation:**
+- Load = number of processes waiting for CPU
+- If load > CPU cores, processes are waiting
+- Example: Load 2.0 on 4-core CPU = 50% capacity used
+
+```
+$ uptime -p
+up 10 minutes
+```
+
+---
+
+### free - Memory Usage
+
+Shows RAM and swap usage.
+
+```
+$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:           7.1Gi       4.9Gi       509Mi        67Mi       2.1Gi       2.2Gi
+Swap:           15Gi       3.0Gi        13Gi
+```
+
+#### Column Explanations
+
+| Column | Meaning |
+|--------|---------|
+| `total` | Total RAM |
+| `used` | RAM currently used |
+| `free` | Completely free RAM |
+| `shared` | RAM shared between processes |
+| `buff/cache` | RAM used for buffers/cache (reclaimable) |
+| `available` | RAM available for new programs |
+
+**Key formula:** `available ≈ free + buffers + cache`
+
+#### free Options
+
+| Command | What it does |
+|---------|-------------|
+| `free` | Show in KB |
+| `free -h` | Human readable (KB, MB, GB) |
+| `free -m` | Show in megabytes |
+| `free -g` | Show in gigabytes |
+
+```
+$ free -m
+               total        used        free      shared  buff/cache   available
+Mem:            7284        5005         508          67        2108        2279
+Swap:          16383        3047       13336
+```
+
+---
+
+### vmstat - Virtual Memory Statistics
+
+Shows CPU, memory, swap, and I/O statistics.
+
+```
+$ vmstat
+procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 2  0 3120384 522380  57616 2102084 1360 5982  9481  8222 18970   20 18  5 77  1  0
+```
+
+#### Run with Interval
+
+```
+$ vmstat 2 3
+procs -----------memory---------- ---swap-- -----io---- -system-- -------cpu-------
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 2  0 3120384 522128  57616 2102084 1360 5982  9481  8222 18970   20 18  5 77  1  0
+ 3  0 3119872 315352  61824 2191132 3532    0 50166   366 21408 25647 20  6 72  1  0  0
+ 4  0 3119616 296376  62648 2198364  114    0  1128   944 23304 25131 15 10 76  0  0  0
+```
+
+#### Column Explanations
+
+| Section | Column | Meaning |
+|---------|--------|---------|
+| **Procs** | `r` | Processes waiting for CPU |
+| | `b` | Processes in uninterruptible sleep |
+| **Memory** | `swpd` | Virtual memory used |
+| | `free` | Free memory |
+| | `buff` | Buffers |
+| | `cache` | Cache |
+| **Swap** | `si` | Swap in (disk → RAM) |
+| | `so` | Swap out (RAM → disk) |
+| **IO** | `bi` | Blocks received |
+| | `bo` | Blocks sent |
+| **System** | `in` | Interrupts per second |
+| | `cs` | Context switches per second |
+| **CPU** | `us` | User time (%) |
+| | `sy` | System time (%) |
+| | `id` | Idle time (%) |
+| | `wa` | I/O wait time (%) |
+
+**What to watch:**
+- High `r` → CPU bottleneck
+- High `si`/`so` → Swap thrashing (need more RAM)
+- High `wa` → Disk bottleneck
+- High `us`/`sy` → CPU busy
+
+---
+
+### iostat - I/O Statistics
+
+Shows disk I/O statistics. Requires `sysstat` package.
+
+```
+$ iostat
+zsh: command not found: iostat
+```
+
+#### Install iostat
+
+```
+sudo apt install sysstat
+```
+
+#### iostat Usage (after install)
+
+| Command | What it does |
+|---------|-------------|
+| `iostat` | CPU + I/O stats |
+| `iostat -x` | Extended stats (await, %util) |
+| `iostat -d` | Disk devices only |
+| `iostat 2 3` | Update every 2 sec, 3 times |
+
+#### Alternative: Check I/O Without iostat
+
+```
+$ cat /proc/diskstats | head -5
+   7       0 loop0 11 0 24 1 0 0 0 0 0 2 1 0 0 0 0 0 0
+   7       1 loop1 15 0 50 3 0 0 0 0 0 5 3 0 0 0 0 0 0
+   7       2 loop2 9 0 22 0 0 0 0 0 0 1 1 0 0 0 0 0 0
+```
+
+---
+
+### System Monitoring Cheat Sheet
+
+| Command | What it shows | When to use |
+|---------|--------------|-------------|
+| `uptime` | Uptime + load average | Quick health check |
+| `free -h` | Memory usage | Check RAM |
+| `vmstat` | CPU, memory, swap, I/O | Overall system health |
+| `iostat` | Disk I/O | Check disk performance |
+| `top` | Interactive processes | Real-time monitoring |
+| `htop` | Pretty process viewer | Easy monitoring |
+| `ps aux` | Process snapshot | Find specific process |
+| `df -h` | Disk space | Check free space |
+
+#### Quick Health Check Command
+
+```
+$ uptime && free -h && df -h | head -5
+ 15:14:28 up 10 min, 1 user, load average: 2.51, 3.11, 1.92
+               total        used        free      shared  buff/cache   available
+Mem:           7.1Gi       5.0Gi       273Mi        67Mi       2.1Gi       2.1Gi
+Swap:           15Gi       3.0Gi        13Gi
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs           729M  2.2M  727M   1% /run
+efivarfs        148K  121K   23K  85% /sys/firmware/efi/efivars
+/dev/nvme0n1p2  234G  145G   77G  66% /
+tmpfs           3.6G   48M  3.6G   2% /dev/shm
+```
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -2733,6 +3152,16 @@ $ pgrep -f chrome
 | `top` | Real-time process viewer |
 | `htop` | Better process viewer |
 | `pgrep` | Find process PID by name |
+| `kill` | Send signal to process |
+| `pkill` | Kill process by name |
+| `killall` | Kill process by exact name |
+| `&` | Run command in background |
+| `jobs` | List background jobs |
+| `nohup` | Run process surviving logout |
+| `uptime` | Show uptime and load |
+| `free -h` | Show memory usage |
+| `vmstat` | Virtual memory statistics |
+| `iostat` | Disk I/O statistics |
 
 ---
 
