@@ -29,6 +29,7 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 21. [User Administration](#21-user-administration)
 22. [Group Management](#22-group-management)
 23. [Sudo](#23-sudo)
+24. [Disk Management](#24-disk-management)
 
 ---
 
@@ -3906,6 +3907,216 @@ user  ALL=(specific_user) cmd     # Run as specific user
 
 ---
 
+## 24. Disk Management
+
+View and manage disks, partitions, and filesystems.
+
+### lsblk - List Block Devices
+
+Shows all disks and partitions in a tree view.
+
+```
+$ lsblk
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+sda           8:0    0 931.5G  0 disk 
+├─sda1        8:1    0    16M  0 part 
+├─sda2        8:2    0 345.6G  0 part 
+├─sda3        8:3    0   293G  0 part 
+└─sda4        8:4    0   293G  0 part 
+nvme0n1     259:0    0 238.5G  0 disk 
+├─nvme0n1p1 259:1    0   512M  0 part /boot/efi
+└─nvme0n1p2 259:2    0   238G  0 part /
+```
+
+#### Understanding lsblk Output
+
+| Column | Meaning |
+|--------|---------|
+| `NAME` | Device name |
+| `SIZE` | Device size |
+| `TYPE` | `disk`, `part`, `rom`, `loop` |
+| `MOUNTPOINTS` | Where it's mounted |
+
+#### Common lsblk Options
+
+| Option | What it does |
+|--------|-------------|
+| `lsblk` | Tree view |
+| `lsblk -f` | Show filesystem type |
+| `lsblk -d` | Disks only (no partitions) |
+| `lsblk -e7` | Exclude loop devices |
+| `lsblk -o col1,col2` | Custom columns |
+
+#### Real Output - With Filesystem
+
+```
+$ lsblk -f
+NAME        FSTYPE FSVER LABEL   UUID                                 MOUNTPOINTS
+sda                                                                         
+├─sda2      ntfs         Drive_D D68A70A08A707F35
+├─sda3      ntfs         Drive_E 8A6A6B276A6B0EEF
+└─sda4      ntfs         Drive_F 8040584340584258
+nvme0n1                                                                     
+├─nvme0n1p1 vfat   FAT32         3ADA-D663                             /boot/efi
+└─nvme0n1p2 ext4   1.0           2391876f-a5f5-4a74-b1a1-2c299f87ebb8 /
+```
+
+#### Custom Columns
+
+```
+$ lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT
+NAME          SIZE TYPE FSTYPE MOUNTPOINT
+sda         931.5G disk        
+├─sda2      345.6G part ntfs   
+nvme0n1     238.5G disk        
+├─nvme0n1p1   512M part vfat   /boot/efi
+└─nvme0n1p2   238G part ext4   /
+```
+
+---
+
+### fdisk - Partition Table Editor
+
+Edit disk partitions interactively.
+
+#### View Partitions
+
+```
+sudo fdisk -l              # List all partitions
+sudo fdisk -l /dev/sda     # List specific disk
+```
+
+#### Interactive Mode
+
+```
+sudo fdisk /dev/sda        # Edit disk (needs sudo)
+```
+
+#### fdisk Commands
+
+| Key | What it does |
+|-----|-------------|
+| `p` | Print partition table |
+| `n` | Create new partition |
+| `d` | Delete partition |
+| `t` | Change partition type |
+| `w` | Write changes to disk |
+| `q` | Quit without saving |
+| `m` | Show help |
+
+#### Example Workflow
+
+```
+$ sudo fdfdisk /dev/sda
+Command (m for help): p        # See current partitions
+Command (m for help): n        # Create new partition
+Command (m for help): w        # Write and exit
+```
+
+**Warning:** Always use `q` to quit if you're unsure. Use `w` only when you're sure!
+
+---
+
+### parted - Advanced Partition Manager
+
+More modern than fdisk. Supports GPT and large disks.
+
+#### View Disks
+
+```
+sudo parted -l               # List all disks
+sudo parted /dev/sda print   # Show specific disk
+```
+
+#### Interactive Mode
+
+```
+sudo parted /dev/sda         # Edit disk (needs sudo)
+```
+
+#### parted Commands
+
+| Command | What it does |
+|---------|-------------|
+| `print` | Show partition table |
+| `mklabel gpt` | Create new GPT partition table |
+| `mklabel msdos` | Create new MBR partition table |
+| `mkpart` | Create new partition |
+| `rm` | Delete partition |
+| `resizepart` | Resize partition |
+| `quit` | Quit |
+| `help` | Show help |
+
+#### parted vs fdisk
+
+| Feature | fdisk | parted |
+|---------|-------|--------|
+| MBR disks | Yes | Yes |
+| GPT disks | Limited | Yes (full) |
+| Large disks (>2TB) | Limited | Yes |
+| Scripting | Hard | Easy (`-s`) |
+| Interactive | Yes | Yes |
+| Modern | Older | Newer |
+
+**When to use:**
+- `fdisk` = Simple MBR partitioning
+- `parted` = GPT, large disks, scripting
+
+---
+
+### Disk Management Workflow
+
+#### View Your Disks
+
+```
+lsblk                     # See all disks
+lsblk -f                  # With filesystem info
+df -h                     # See mounted space
+sudo fdisk -l             # Detailed partition info
+```
+
+#### Create Partition (fdisk)
+
+```
+sudo fdisk /dev/sdb
+  p  = Check current state
+  n  = New partition
+  w  = Write changes
+```
+
+#### After Partitioning
+
+```
+sudo mkfs.ext4 /dev/sdb1    # Format as ext4
+sudo mount /dev/sdb1 /mnt   # Mount
+blkid /dev/sdb1             # Get UUID
+```
+
+#### Make Permanent (add to /etc/fstab)
+
+```
+UUID=xxxx-xxxx  /mnt  ext4  defaults  0  2
+```
+
+---
+
+### Disk Management Cheat Sheet
+
+| Task | Command |
+|------|---------|
+| List disks | `lsblk` |
+| List with filesystem | `lsblk -f` |
+| List partitions | `sudo fdisk -l` |
+| List all disks (parted) | `sudo parted -l` |
+| Show mounted space | `df -h` |
+| Show disk UUIDs | `blkid` |
+| Edit with fdisk | `sudo fdisk /dev/sdX` |
+| Edit with parted | `sudo parted /dev/sdX` |
+| Format partition | `sudo mkfs.ext4 /dev/sdX1` |
+| Mount partition | `sudo mount /dev/sdX1 /mnt` |
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -3991,6 +4202,9 @@ user  ALL=(specific_user) cmd     # Run as specific user
 | `gpasswd` | Manage group members |
 | `sudo` | Run command as root |
 | `visudo` | Edit sudoers safely |
+| `lsblk` | List block devices |
+| `fdisk` | Partition table editor |
+| `parted` | Advanced partition manager |
 
 ---
 
