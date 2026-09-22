@@ -33,6 +33,8 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 25. [Filesystems and Mounting](#25-filesystems-and-mounting)
 26. [LVM - Logical Volume Management](#26-lvm---logical-volume-management)
 27. [Systemd and Services](#27-systemd-and-services)
+28. [Service Management](#28-service-management)
+29. [Creating Custom Services](#29-creating-custom-services)
 
 ---
 
@@ -4791,6 +4793,355 @@ WantedBy=multi-user.target
 
 ---
 
+## 28. Service Management
+
+### systemctl - Control Services
+
+#### Basic Commands
+
+| Command | What it does |
+|---------|-------------|
+| `systemctl status svc` | Check status |
+| `sudo systemctl start svc` | Start service |
+| `sudo systemctl stop svc` | Stop service |
+| `sudo systemctl restart svc` | Restart service |
+| `sudo systemctl reload svc` | Reload config |
+
+#### Enable/Disable Commands
+
+| Command | What it does |
+|---------|-------------|
+| `sudo systemctl enable svc` | Start at boot |
+| `sudo systemctl disable svc` | Don't start at boot |
+| `sudo systemctl enable --now svc` | Enable + start now |
+| `sudo systemctl mask svc` | Completely disable |
+| `sudo systemctl unmask svc` | Re-enable |
+
+#### Check Status Commands
+
+| Command | What it does |
+|---------|-------------|
+| `systemctl is-active svc` | Is it running? |
+| `systemctl is-enabled svc` | Does it start at boot? |
+| `systemctl is-failed svc` | Has it failed? |
+| `sudo systemctl daemon-reload` | Reload config after changes |
+
+#### Real Output
+
+```
+$ systemctl status nginx
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled)
+     Active: active (running) since Tue 2026-09-22 09:38:23 IST; 6h ago
+   Main PID: 1961 (nginx)
+      Tasks: 14
+     Memory: 2.3M
+
+$ systemctl is-active nginx
+active
+
+$ systemctl is-enabled nginx
+enabled
+```
+
+---
+
+### journalctl - View Logs
+
+#### Basic Commands
+
+| Command | What it does |
+|---------|-------------|
+| `journalctl` | All logs |
+| `journalctl -u svc` | Service logs |
+| `journalctl -f` | Follow (live tail) |
+| `journalctl -e` | Jump to end |
+| `journalctl -n 50` | Last 50 lines |
+| `journalctl --since today` | Since today |
+| `journalctl -p err` | Errors only |
+
+#### Real Output
+
+```
+$ journalctl -n 10
+Sep 22 16:12:01 amit systemd[1]: openclaw-gateway.service: Failed with result 'exit-code'.
+Sep 22 16:12:04 amit systemd[1]: Started ram-manager.service - Automatic RAM Manager.
+Sep 22 16:12:04 amit systemd[1]: ram-manager.service: Main process exited, code=exited, status=203/EXEC
+Sep 22 16:12:07 amit systemd[1]: Started openclaw-gateway.service - OpenClaw Gateway.
+
+$ journalctl -u nginx
+Sep 22 09:38:23 amit systemd[1]: Starting nginx.service...
+Sep 22 09:38:23 amit systemd[1]: Started nginx.service...
+
+$ journalctl -p err
+Sep 22 16:00:01 amit sudo[22155]: pam_unix(sudo:auth): conversation failed
+```
+
+#### Advanced journalctl
+
+| Command | What it does |
+|---------|-------------|
+| `journalctl --since '2026-09-22 10:00'` | From specific time |
+| `journalctl --until today` | Until today |
+| `journalctl --since yesterday` | Since yesterday |
+| `journalctl -b` | Current boot |
+| `journalctl -b -1` | Previous boot |
+| `journalctl --list-boots` | List all boots |
+
+#### Priority Levels
+
+| Priority | Name | Use |
+|----------|------|-----|
+| 0 | emerg | Emergency |
+| 1 | alert | Alert |
+| 2 | crit | Critical |
+| 3 | err | **Errors (most useful)** |
+| 4 | warning | Warnings |
+| 5 | notice | Notices |
+| 6 | info | Info |
+| 7 | debug | Debug |
+
+```
+journalctl -p err       # Errors only
+journalctl -p warning   # Warnings + errors
+journalctl -p 3         # Same as -p err
+```
+
+---
+
+### Service Management Cheat Sheet
+
+#### systemctl
+
+| Command | Purpose |
+|---------|---------|
+| `systemctl status svc` | Status |
+| `sudo systemctl start svc` | Start |
+| `sudo systemctl stop svc` | Stop |
+| `sudo systemctl restart svc` | Restart |
+| `sudo systemctl reload svc` | Reload |
+| `sudo systemctl enable svc` | Boot start |
+| `sudo systemctl disable svc` | No boot start |
+| `systemctl is-active svc` | Running? |
+| `systemctl is-enabled svc` | Boot enabled? |
+| `sudo systemctl daemon-reload` | Reload config |
+
+#### journalctl
+
+| Command | Purpose |
+|---------|---------|
+| `journalctl` | All logs |
+| `journalctl -u svc` | Service logs |
+| `journalctl -f` | Follow live |
+| `journalctl -n 50` | Last 50 lines |
+| `journalctl -p err` | Errors only |
+| `journalctl --since today` | Today |
+| `journalctl -b` | Current boot |
+
+---
+
+## 29. Creating Custom Services
+
+### Service File Locations
+
+| Location | Purpose |
+|----------|---------|
+| `/etc/systemd/system/` | **Custom services (you create)** |
+| `/lib/systemd/system/` | Package services |
+| `/usr/lib/systemd/system/` | Package services |
+
+---
+
+### Service File Structure
+
+A service file has three sections:
+
+```
+[Unit]
+Description=My Custom Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/myscript.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### [Unit] Section
+
+| Option | What it does |
+|--------|-------------|
+| `Description=` | What the service does |
+| `After=` | Start after these units |
+| `Requires=` | Require these units |
+| `Wants=` | Soft dependency |
+
+#### [Service] Section
+
+| Option | What it does |
+|--------|-------------|
+| `Type=simple` | How service runs |
+| `ExecStart=` | Command to start |
+| `ExecStop=` | Command to stop |
+| `ExecReload=` | Command to reload |
+| `Restart=on-failure` | Restart on failure |
+| `RestartSec=10` | Wait 10s before restart |
+| `User=nobody` | Run as user |
+| `WorkingDirectory=` | Working directory |
+
+#### [Install] Section
+
+| Option | What it does |
+|--------|-------------|
+| `WantedBy=multi-user.target` | When to start |
+| `Also=` | Start other services too |
+
+---
+
+### Custom Service Workflow
+
+#### Step 1: Create a Script
+
+```bash
+sudo nano /usr/local/bin/myapp.sh
+```
+
+```bash
+#!/bin/bash
+while true; do
+  echo "$(date): Running my script" >> /var/log/myapp.log
+  sleep 60
+done
+```
+
+```bash
+sudo chmod +x /usr/local/bin/myapp.sh
+```
+
+#### Step 2: Create Service File
+
+```bash
+sudo nano /etc/systemd/system/myapp.service
+```
+
+```ini
+[Unit]
+Description=My Custom Script Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/myapp.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### Step 3: Reload systemd
+
+```bash
+sudo systemctl daemon-reload
+```
+
+#### Step 4: Enable and Start
+
+```bash
+sudo systemctl enable myapp.service
+sudo systemctl start myapp.service
+```
+
+#### Step 5: Check Status
+
+```bash
+systemctl status myapp.service
+```
+
+#### Step 6: View Logs
+
+```bash
+journalctl -u myapp.service
+```
+
+#### Step 7: Stop/Disable
+
+```bash
+sudo systemctl stop myapp.service
+sudo systemctl disable myapp.service
+```
+
+---
+
+### Real Service File Examples
+
+#### nginx.service
+
+```ini
+[Unit]
+Description=A high performance web server
+Documentation=man:nginx(8)
+After=network-online.target remote-fs.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/run/nginx.pid
+ExecStartPre=/usr/sbin/nginx -t -q
+ExecStart=/usr/sbin/nginx -g 'daemon on; master_process on;'
+ExecReload=/usr/sbin/nginx -s reload
+ExecStop=-/sbin/start-stop-daemon --stop --retry QUIT/5
+KillMode=mixed
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### ssh.service
+
+```ini
+[Unit]
+Description=OpenBSD Secure Shell server
+After=network.target auditd.service
+
+[Service]
+ExecStartPre=/usr/sbin/sshd -t
+ExecStart=/usr/sbin/sshd -D $SSHD_OPTS
+ExecReload=/usr/sbin/sshd -t
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+Type=notify
+
+[Install]
+WantedBy=multi-user.target
+Alias=sshd.service
+```
+
+---
+
+### Custom Service Cheat Sheet
+
+| Step | Command |
+|------|---------|
+| 1. Create script | `sudo nano /usr/local/bin/myapp.sh` |
+| 2. Make executable | `sudo chmod +x /usr/local/bin/myapp.sh` |
+| 3. Create service | `sudo nano /etc/systemd/system/myapp.service` |
+| 4. Reload systemd | `sudo systemctl daemon-reload` |
+| 5. Enable | `sudo systemctl enable myapp.service` |
+| 6. Start | `sudo systemctl start myapp.service` |
+| 7. Check | `systemctl status myapp.service` |
+| 8. Logs | `journalctl -u myapp.service` |
+| 9. Stop | `sudo systemctl stop myapp.service` |
+| 10. Delete | `sudo systemctl disable myapp.service` + remove file |
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -4891,6 +5242,9 @@ WantedBy=multi-user.target
 | `systemctl status` | Check service status |
 | `systemctl enable` | Start service at boot |
 | `systemctl set-default` | Change default target |
+| `journalctl -u svc` | View service logs |
+| `systemctl daemon-reload` | Reload service config |
+| Custom service | `/etc/systemd/system/name.service` |
 
 ---
 
