@@ -27,6 +27,8 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 19. [Package Management - Debian](#19-package-management---debian)
 20. [Package Management - Red Hat](#20-package-management---red-hat)
 21. [User Administration](#21-user-administration)
+22. [Group Management](#22-group-management)
+23. [Sudo](#23-sudo)
 
 ---
 
@@ -3646,6 +3648,264 @@ sudo userdel -r username                # Delete user + home
 
 ---
 
+## 22. Group Management
+
+Groups organize users and control shared permissions.
+
+### groupadd - Create New Group
+
+#### Common Options
+
+| Option | What it does |
+|--------|-------------|
+| `groupadd name` | Create group |
+| `-g GID` | Set custom Group ID |
+| `-r` | Create system group |
+
+```
+sudo groupadd developers           # Create group
+sudo groupadd -g 1500 team         # Create with custom GID
+sudo groupadd -r sysgroup          # Create system group
+```
+
+#### Current Groups on Your System
+
+```
+$ cat /etc/group | tail -10
+docker:x:986:amit,jenkins
+ollama:x:984:amit
+libvirt:x:132:amit
+```
+
+---
+
+### groupmod - Modify Existing Group
+
+#### Common Options
+
+| Option | What it does |
+|--------|-------------|
+| `-n newname` | Rename group |
+| `-g GID` | Change Group ID |
+
+```
+sudo groupmod -n newname oldname     # Rename group
+sudo groupmod -g 1500 groupname      # Change GID
+```
+
+---
+
+### groupdel - Delete a Group
+
+```
+sudo groupdel groupname              # Delete group
+sudo groupdel -f groupname           # Force delete
+```
+
+**Note:** Cannot delete a group if it's a primary group of any user. Use `-f` to force.
+
+---
+
+### Managing Group Membership
+
+#### Add User to Group
+
+```
+sudo usermod -aG groupname username    # Add to group (append)
+sudo gpasswd -a username groupname     # Alternative method
+```
+
+#### Remove User from Group
+
+```
+sudo gpasswd -d username groupname     # Remove from group
+sudo usermod -G group1,group2 user     # Set groups (replace all)
+```
+
+#### View Group Members
+
+```
+groups username               # Show user's groups
+id username                   # Show user's groups
+getent group groupname        # Show group members
+cat /etc/group | grep group   # From group file
+```
+
+#### Real Output
+
+```
+$ getent group docker
+docker:x:986:amit,jenkins
+
+$ id amit
+uid=1000(amit) gid=1000(amit) groups=1000(amit),4(adm),27(sudo),986(docker)
+
+$ groups amit
+amit adm cdrom sudo dip plugdev users lpadmin sambashare libvirt ollama docker kvm
+```
+
+---
+
+### Group Management Cheat Sheet
+
+| Task | Command |
+|------|---------|
+| Create group | `sudo groupadd groupname` |
+| Create with GID | `sudo groupadd -g 1500 groupname` |
+| Rename group | `sudo groupmod -n newname oldname` |
+| Change GID | `sudo groupmod -g GID groupname` |
+| Delete group | `sudo groupdel groupname` |
+| Add user to group | `sudo usermod -aG group user` |
+| Remove from group | `sudo gpasswd -d user group` |
+| View group members | `getent group groupname` |
+| View user groups | `groups username` |
+
+---
+
+## 23. Sudo
+
+**sudo** (Super User DO) lets authorized users run commands as root.
+
+### sudo Basics
+
+| Command | What it does |
+|---------|-------------|
+| `sudo command` | Run command as root |
+| `sudo -u user command` | Run as specific user |
+| `sudo -i` | Start root shell |
+| `sudo -s` | Start shell as root |
+| `sudo -l` | List allowed sudo commands |
+| `sudo -k` | Forget cached password |
+
+```
+$ sudo --version
+Sudo version 1.9.15p5
+
+$ groups | grep sudo
+sudo
+(You are in sudo group)
+```
+
+#### Examples
+
+```
+sudo apt update                  # Run apt as root
+sudo systemctl restart nginx     # Restart service as root
+sudo -i                          # Get root shell
+sudo -l                          # See what you can run
+```
+
+---
+
+### /etc/sudoers - Sudo Configuration
+
+**⚠️ NEVER edit /etc/sudoers directly! Always use `sudo visudo`!**
+
+#### Why Not Edit Directly?
+
+```
+$ cat /etc/sudoers
+cat: /etc/sudoers: Permission denied
+```
+
+If you break the sudoers file with a text editor:
+- You get **locked out** of sudo
+- Recovery requires booting from live USB
+
+#### Sudoers File Format
+
+```
+user  ALL=(ALL:ALL) ALL
+```
+
+| Field | Meaning |
+|-------|---------|
+| `user` | Who can run commands |
+| `ALL` | From any host |
+| `(ALL)` | As any user |
+| `(ALL:ALL)` | As any user:group |
+| `ALL` | Any command |
+
+#### Common Sudoers Entries
+
+```
+# Full sudo access for a user
+amit  ALL=(ALL:ALL) ALL
+
+# Group specification (prefix % means group)
+%sudo  ALL=(ALL:ALL) ALL
+
+# Specific command without password
+john  ALL=(ALL) NOPASSWD: /usr/bin/apt
+
+# Specific command only
+bob   ALL=(ALL) /usr/bin/systemctl restart nginx
+
+# Run as specific user
+www   ALL=(www) NOPASSWD: /usr/bin/systemctl reload nginx
+```
+
+---
+
+### visudo - Safe Sudoers Editor
+
+#### Why Use visudo?
+
+| Feature | visudo | nano/vi directly |
+|---------|--------|------------------|
+| Syntax check | Yes | No |
+| Prevents lockout | Yes | No |
+| Safe | Yes | Dangerous |
+
+#### Usage
+
+```
+sudo visudo                # Edit /etc/sudoers safely
+sudo visudo -f file        # Edit alternative file
+```
+
+#### How It Works
+
+1. Creates a temporary file
+2. You edit the temp file
+3. Validates syntax before saving
+4. If syntax is wrong, **rejects the change**
+5. Only saves if valid
+
+#### NEVER Do This
+
+```
+sudo nano /etc/sudoers     # ❌ DANGEROUS!
+sudo vim /etc/sudoers      # ❌ DANGEROUS!
+```
+
+**If you break sudoers:** Boot from live USB → mount disk → fix the file.
+
+---
+
+### Sudo Cheat Sheet
+
+| Task | Command |
+|------|---------|
+| Run as root | `sudo command` |
+| Root shell | `sudo -i` |
+| List allowed | `sudo -l` |
+| Edit sudoers | `sudo visudo` |
+| Check sudo group | `groups \| grep sudo` |
+| Add user to sudo | `sudo usermod -aG sudo username` |
+
+### Sudoers Format Quick Reference
+
+```
+user  ALL=(ALL:ALL) ALL           # Full access
+%group ALL=(ALL:ALL) ALL          # Group access
+user  ALL=(ALL) NOPASSWD: cmd     # No password needed
+user  ALL=(ALL) /path/to/cmd      # Specific command only
+user  ALL=(specific_user) cmd     # Run as specific user
+```
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -3725,6 +3985,12 @@ sudo userdel -r username                # Delete user + home
 | `usermod` | Modify existing user |
 | `passwd` | Manage passwords |
 | `userdel` | Delete user |
+| `groupadd` | Create new group |
+| `groupmod` | Modify existing group |
+| `groupdel` | Delete group |
+| `gpasswd` | Manage group members |
+| `sudo` | Run command as root |
+| `visudo` | Edit sudoers safely |
 
 ---
 
