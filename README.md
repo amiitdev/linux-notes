@@ -39,6 +39,7 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 31. [Firewall](#31-firewall)
 32. [SSH Hardening](#32-ssh-hardening)
 33. [SELinux and AppArmor](#33-selinux-and-apparmor)
+34. [SSH - Control Remote Machine](#34-ssh---control-remote-machine)
 
 ---
 
@@ -5460,6 +5461,275 @@ apparmor module is loaded.
 
 ---
 
+## 34. SSH - Control Remote Machine
+
+SSH lets you control another computer remotely. Here's how to control your **MX Linux XFCE** laptop from this laptop.
+
+### What is SSH?
+
+```
+This Laptop (Client)  ----SSH---->  MX Linux Laptop (Server)
+     You type commands                  Commands execute there
+```
+
+---
+
+### Real Output from This Laptop
+
+```
+$ ssh -V
+OpenSSH_9.6p1 Ubuntu-3ubuntu13.18, OpenSSL 3.0.13 30 Jan 2024
+
+$ hostname -I
+10.139.53.40 192.168.122.1 172.18.0.1 ...
+
+$ hostname
+amit
+
+$ ls -la ~/.ssh/
+-rw------- 1 amit amit  399 Aug  8 14:14 id_ed25519
+-rw-r--r-- 1 amit amit   91 Aug  8 14:14 id_ed25519.pub
+-rw------- 1 amit amit  351 Sep  8 22:20 config
+-rw------- 1 amit amit 3076 Sep  8 22:04 known_hosts
+
+$ cat ~/.ssh/id_ed25519.pub
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHP39mT/M3KlyIX1Z3tDyXdG29rHWeUfg4sVRbAXhc8z amit@amit
+
+$ systemctl is-active ssh
+active
+
+$ ss -tlnp | grep :22
+LISTEN 0 4096 0.0.0.0:22 0.0.0.0:*
+LISTEN 0 4096 [::]:22 [::]:*
+```
+
+---
+
+### Step-by-Step: Control MX Linux via SSH
+
+#### STEP 1: ON MX LINUX LAPTOP (Server Side)
+
+Open terminal on MX Linux and run:
+
+```bash
+# 1a. Install SSH server
+sudo apt update
+sudo apt install openssh-server
+
+# 1b. Enable and start SSH
+sudo systemctl enable ssh
+sudo systemctl start ssh
+
+# 1c. Check status
+sudo systemctl status ssh
+
+# 1d. Find IP address (note it down!)
+hostname -I
+# Example output: 192.168.1.100
+
+# 1e. Allow SSH in firewall
+sudo ufw allow 22/tcp
+sudo ufw status
+```
+
+#### STEP 2: ON YOUR LAPTOP (Client Side)
+
+```bash
+# 2a. Generate SSH key (if not exists)
+ssh-keygen -t ed25519
+# Press Enter for all defaults
+
+# 2b. Copy key to MX Linux
+ssh-copy-id your_username@192.168.1.100
+# Replace with your MX Linux username and IP
+# Enter password when prompted
+
+# 2c. Test connection
+ssh your_username@192.168.1.100
+```
+
+#### STEP 3: CONNECT!
+
+```bash
+# Basic connection
+ssh your_username@192.168.1.100
+
+# With config alias (easier - see below)
+ssh mx
+
+# Run commands remotely
+ssh your_username@192.168.1.100 'ls -la'
+ssh your_username@192.168.1.100 'uptime'
+
+# Copy files
+scp file.txt your_username@192.168.1.100:~/
+scp your_username@192.168.1.100:~/file.txt .
+```
+
+---
+
+### SSH Config Alias (Easy Connection)
+
+Create `~/.ssh/config` on your laptop:
+
+```bash
+nano ~/.ssh/config
+```
+
+Add this:
+
+```
+# MX Linux Laptop
+Host mx
+    HostName 192.168.1.100
+    User your_username
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+```
+
+Now connect with just:
+
+```bash
+ssh mx
+```
+
+#### Your Current SSH Config
+
+```
+$ cat ~/.ssh/config
+# Personal GitHub
+Host github-personal
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_personal
+  IdentitiesOnly yes
+
+# Work GitHub
+Host github-work
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_work
+  IdentitiesOnly yes
+
+# Android Phone (Termux)
+Host myphone
+  HostName 192.168.29.192
+  User u0_a395
+  Port 8022
+```
+
+---
+
+### SSH Commands
+
+#### Connect
+
+| Command | What it does |
+|---------|-------------|
+| `ssh user@ip` | Connect to remote |
+| `ssh -p 2222 user@ip` | Custom port |
+| `ssh mx` | Connect with alias |
+| `ssh -v user@ip` | Verbose (debug) |
+
+#### Transfer Files
+
+| Command | What it does |
+|---------|-------------|
+| `scp file user@ip:/path` | Copy to remote |
+| `scp user@ip:/path/file .` | Copy from remote |
+| `scp -r dir user@ip:/path` | Copy directory |
+| `rsync -avz ./dir user@ip:/path` | Sync directory |
+
+#### SSH Keys
+
+| Command | What it does |
+|---------|-------------|
+| `ssh-keygen -t ed25519` | Generate key pair |
+| `ssh-copy-id user@ip` | Copy key to remote |
+| `ssh -i ~/.ssh/key user@ip` | Use specific key |
+
+#### Remote Commands
+
+| Command | What it does |
+|---------|-------------|
+| `ssh user@ip 'command'` | Run command remotely |
+| `ssh -t user@ip` | Interactive shell |
+
+---
+
+### SSH Server Config (on MX Linux)
+
+Edit `/etc/ssh/sshd_config`:
+
+```bash
+# Important settings
+Port 22                       # SSH port
+PermitRootLogin no            # No root login
+PasswordAuthentication yes     # Allow passwords (disable later)
+PubkeyAuthentication yes       # Allow keys
+AllowUsers your_username       # Limit users
+```
+
+Test and restart:
+
+```bash
+sudo sshd -t                  # Test config
+sudo systemctl restart ssh    # Restart
+```
+
+---
+
+### SSH Security Tips
+
+1. **Use SSH keys** (not passwords)
+2. **Disable password auth** (after keys work): `PasswordAuthentication no`
+3. **Change default port** (optional): `Port 2222`
+4. **Disable root login**: `PermitRootLogin no`
+5. **Install fail2ban**: `sudo apt install fail2ban`
+6. **Restrict users**: `AllowUsers your_username`
+
+---
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Connection refused | `sudo systemctl start ssh` (on server) |
+| Permission denied | `ssh-copy-id user@ip` (copy your key) |
+| Network unreachable | Check IP, ping the server |
+| Host key verification failed | `ssh-keygen -R ip` |
+| Firewall blocking | `sudo ufw allow 22/tcp` (on server) |
+
+---
+
+### SSH Cheat Sheet
+
+```bash
+# Setup (MX Linux)
+sudo apt install openssh-server     # Install
+sudo systemctl enable ssh           # Enable
+sudo systemctl start ssh            # Start
+hostname -I                         # Get IP
+
+# Connect (Your Laptop)
+ssh-keygen -t ed25519               # Generate key
+ssh-copy-id user@ip                  # Copy key
+ssh user@ip                         # Connect
+ssh mx                              # Connect with alias
+
+# Transfer Files
+scp file user@ip:/path              # Copy to remote
+scp user@ip:/path/file .            # Copy from remote
+rsync -avz ./dir user@ip:/path      # Sync directory
+
+# Remote Commands
+ssh user@ip 'command'               # Run command
+```
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -5569,6 +5839,10 @@ apparmor module is loaded.
 | SSH hardening | `/etc/ssh/sshd_config` |
 | SELinux | MAC security (RHEL) |
 | AppArmor | MAC security (Ubuntu) |
+| `ssh` | Connect to remote machine |
+| `scp` | Copy files over SSH |
+| `ssh-keygen` | Generate SSH key |
+| `ssh-copy-id` | Copy SSH key to remote |
 
 ---
 
