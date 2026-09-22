@@ -26,6 +26,7 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 18. [System Monitoring](#18-system-monitoring)
 19. [Package Management - Debian](#19-package-management---debian)
 20. [Package Management - Red Hat](#20-package-management---red-hat)
+21. [User Administration](#21-user-administration)
 
 ---
 
@@ -3400,6 +3401,251 @@ rpm -qa                      # List all installed
 
 ---
 
+## 21. User Administration
+
+Manage user accounts, passwords, and groups.
+
+### Understanding Users
+
+#### User Files
+
+| File | Purpose |
+|------|---------|
+| `/etc/passwd` | User account information |
+| `/etc/shadow` | Password hashes (root only) |
+| `/etc/group` | Group information |
+
+#### /etc/passwd Format
+
+```
+username:password:UID:GID:comment:home:shell
+```
+
+```
+$ cat /etc/passwd | grep -E "amit|root"
+root:x:0:0:root:/root:/bin/bash
+amit:x:1000:1000:amit,,,:/home/amit:/usr/bin/zsh
+```
+
+| Field | Meaning | Example |
+|-------|---------|---------|
+| `username` | Login name | `amit` |
+| `password` | `x` = in /etc/shadow | `x` |
+| `UID` | User ID | `1000` |
+| `GID` | Primary group ID | `1000` |
+| `comment` | Full name/description | `amit,,,` |
+| `home` | Home directory | `/home/amit` |
+| `shell` | Default shell | `/usr/bin/zsh` |
+
+#### /etc/group Format
+
+```
+group:password:GID:members
+```
+
+```
+$ cat /etc/group | grep -E "amit|sudo|docker"
+sudo:x:27:amit
+amit:x:1000:
+docker:x:986:amit,jenkins
+```
+
+| Field | Meaning | Example |
+|-------|---------|---------|
+| `group` | Group name | `docker` |
+| `password` | `x` = in /etc/gshadow | `x` |
+| `GID` | Group ID | `986` |
+| `members` | Comma-separated users | `amit,jenkins` |
+
+#### Your User Info
+
+```
+$ id
+uid=1000(amit) gid=1000(amit) groups=1000(amit),4(adm),27(sudo),986(docker)
+
+$ groups
+amit adm cdrom sudo dip plugdev users lpadmin sambashare libvirt ollama docker kvm
+```
+
+---
+
+### useradd - Create a New User
+
+#### Common useradd Options
+
+| Option | What it does |
+|--------|-------------|
+| `-m` | Create home directory |
+| `-s /bin/bash` | Set default shell |
+| `-g group` | Set primary group |
+| `-G group1,group2` | Set additional groups |
+| `-u UID` | Set custom User ID |
+| `-e 2025-12-31` | Set expiry date |
+| `-c "comment"` | Add comment (full name) |
+
+#### Examples
+
+```
+sudo useradd -m john                    # Create with home dir
+sudo useradd -m -s /bin/bash john       # Create + bash shell
+sudo useradd -m -s /bin/zsh john        # Create + zsh shell
+sudo useradd -m -g developers john      # Set primary group
+sudo useradd -m -G sudo,docker john     # Add to multiple groups
+sudo useradd -m -u 1500 john            # Custom UID
+sudo useradd -m -e 2025-12-31 john      # Account expires
+sudo passwd john                        # Set password
+```
+
+#### After Creating User
+
+```
+sudo useradd -m -s /bin/bash newuser
+sudo passwd newuser
+id newuser                              # Verify
+ls -la /home/newuser                    # Check home dir
+```
+
+---
+
+### usermod - Modify Existing User
+
+#### Common usermod Options
+
+| Option | What it does |
+|--------|-------------|
+| `-l newname` | Change username |
+| `-d /new/home` | Change home directory |
+| `-s /bin/zsh` | Change default shell |
+| `-aG group` | **Add** to group (append) |
+| `-G group1,group2` | **Set** groups (replace all) |
+| `-L` | Lock account |
+| `-U` | Unlock account |
+| `-e date` | Change expiry date |
+
+#### Important: -aG vs -G
+
+```
+sudo usermod -aG docker john    # ADD to docker (keeps other groups)
+sudo usermod -G docker john     # ONLY in docker (removes other groups)
+```
+
+**Always use `-aG` when adding to a group!** Using `-G` will remove the user from all other groups.
+
+#### Examples
+
+```
+sudo usermod -aG sudo john          # Give sudo access
+sudo usermod -aG docker john        # Add to docker group
+sudo usermod -l johnny john         # Change username
+sudo usermod -s /bin/bash john      # Change shell
+sudo usermod -d /home/new john      # Change home dir
+sudo usermod -L john                # Lock account
+sudo usermod -U john                # Unlock account
+```
+
+---
+
+### passwd - Manage Passwords
+
+#### Common passwd Options
+
+| Option | What it does |
+|--------|-------------|
+| (none) | Change own password |
+| `sudo passwd user` | Change user's password |
+| `-l user` | Lock password |
+| `-u user` | Unlock password |
+| `-S user` | Show password status |
+| `-e user` | Force password change on next login |
+| `-d user` | Delete password (no password needed) |
+
+#### Examples
+
+```
+passwd                    # Change your own password
+sudo passwd john          # Change John's password
+sudo passwd -S john       # Show password status
+sudo passwd -l john       # Lock John's account
+sudo passwd -u john       # Unlock John's account
+sudo passwd -e john       # Force password change on next login
+```
+
+#### Your Password Status
+
+```
+$ passwd -S $(whoami)
+amit P 09/21/2026 0 99999 7 -1
+```
+
+| Status | Meaning |
+|--------|---------|
+| `P` | Password set (valid) |
+| `L` | Locked |
+| `NP` | No password |
+
+---
+
+### userdel - Delete a User
+
+#### Common userdel Options
+
+| Option | What it does |
+|--------|-------------|
+| `userdel user` | Delete user (keeps home) |
+| `-r user` | Delete user + home directory |
+| `-f user` | Force delete (even if logged in) |
+
+#### Examples
+
+```
+sudo userdel john           # Delete user (home remains)
+sudo userdel -r john        # Delete user + home directory
+sudo userdel -f john        # Force delete (logged in)
+sudo userdel -r -f john     # Force delete + home
+```
+
+**Warning:** `-r` permanently deletes the home directory and all files!
+
+---
+
+### User Management Workflow
+
+#### Create a Complete User
+
+```
+sudo useradd -m -s /bin/bash newuser    # Create user
+sudo passwd newuser                      # Set password
+sudo usermod -aG sudo newuser           # Give sudo (optional)
+id newuser                              # Verify
+```
+
+#### Delete a User Completely
+
+```
+sudo userdel -r username                # Delete user + home
+```
+
+---
+
+### User Management Cheat Sheet
+
+| Task | Command |
+|------|---------|
+| **Create user** | `sudo useradd -m -s /bin/bash user` |
+| **Set password** | `sudo passwd user` |
+| **Add to group** | `sudo usermod -aG group user` |
+| **Change shell** | `sudo usermod -s /bin/bash user` |
+| **Lock account** | `sudo usermod -L user` |
+| **Unlock account** | `sudo usermod -U user` |
+| **Delete user** | `sudo userdel -r user` |
+| **View all users** | `cat /etc/passwd` |
+| **View all groups** | `cat /etc/group` |
+| **User info** | `id user` |
+| **Your groups** | `groups` |
+| **Password status** | `passwd -S user` |
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -3475,6 +3721,10 @@ rpm -qa                      # List all installed
 | `dnf` | Red Hat package manager (high-level) |
 | `yum` | Red Hat package manager (older) |
 | `rpm` | Red Hat package manager (low-level) |
+| `useradd` | Create new user |
+| `usermod` | Modify existing user |
+| `passwd` | Manage passwords |
+| `userdel` | Delete user |
 
 ---
 
