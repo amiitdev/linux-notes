@@ -21,6 +21,7 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 13. [File Searching](#13-file-searching)
 14. [Text Utilities](#14-text-utilities)
 15. [Redirection and Pipes](#15-redirection-and-pipes)
+16. [Process Management](#16-process-management)
 
 ---
 
@@ -2439,6 +2440,239 @@ $ cat /etc/passwd | grep amit | cut -d: -f1,6
 
 ---
 
+## 16. Process Management
+
+A **process** is any program currently running. Each process has a unique **PID** (Process ID).
+
+### ps - Process Status
+
+Shows a snapshot of running processes.
+
+#### Common ps Options
+
+| Command | What it does |
+|---------|-------------|
+| `ps` | Current terminal processes |
+| `ps aux` | ALL processes (all users) |
+| `ps -ef` | Full listing (all processes) |
+| `ps aux \| grep name` | Find specific process |
+| `ps aux --sort=-%cpu` | Sort by CPU usage |
+| `ps aux --sort=-%mem` | Sort by memory usage |
+
+#### Understanding ps aux Output
+
+```
+$ ps aux | head -5
+USER    PID  %CPU %MEM    VSZ   RSS TTY   STAT START  TIME COMMAND
+root      1  0.9  0.1  23292 12980 ?     Ss   15:03  0:01 /sbin/init
+root      2  0.0  0.0      0     0 ?     S    15:03  0:00 [kthreadd]
+```
+
+| Column | Meaning |
+|--------|---------|
+| `USER` | Who owns the process |
+| `PID` | Process ID (unique number) |
+| `%CPU` | CPU usage percentage |
+| `%MEM` | Memory usage percentage |
+| `VSZ` | Virtual memory size |
+| `RSS` | Resident memory (actual RAM used) |
+| `STAT` | Process state |
+| `COMMAND` | Command that started it |
+
+#### Common Process States (STAT)
+
+| State | Meaning |
+|-------|---------|
+| `R` | Running |
+| `S` | Sleeping (waiting) |
+| `D` | Uninterruptible sleep (disk I/O) |
+| `Z` | Zombie (finished but not cleaned up) |
+| `T` | Stopped |
+
+#### Real Output
+
+```
+$ ps aux | wc -l
+399
+
+$ ps aux | grep nginx
+root    1961  0.0  0.0  22232  1408 ?  Ss  15:04  0:00 nginx: master process
+www-data 1962  0.0  0.0  23984  3456 ?  S   15:04  0:00 nginx: worker process
+www-data 1963  0.0  0.0  23984  3456 ?  S   15:04  0:00 nginx: worker process
+
+$ ps aux --sort=-%cpu | head -5
+USER    PID  %CPU %MEM    VSZ   RSS TTY   STAT START  TIME COMMAND
+amit    5526 86.6 11.0 75505364 820760 pts/0 Rl+ 15:05 1:43 opencode
+amit    5773 57.0 14.7 4850596 1102488 ? Sl  15:05 1:02 firefox-bin
+
+$ ps aux --sort=-%mem | head -5
+USER    PID  %CPU %MEM    VSZ   RSS TTY   STAT START  TIME COMMAND
+amit    5773 57.0 14.7 4850596 1102488 ? Sl  15:05 1:02 firefox-bin
+amit    5526 86.6 11.0 75505620 823832 pts/0 Rl+ 15:05 1:43 opencode
+```
+
+---
+
+### top - Interactive Process Viewer
+
+Real-time view of processes. Updates automatically.
+
+```
+$ top
+top - 15:07:16 up 3 min, 1 user, load average: 5.02, 2.57, 1.01
+Tasks: 398 total, 3 running, 395 sleeping, 0 stopped, 0 zombie
+%Cpu(s): 41.3 us, 7.7 sy, 0.0 ni, 50.3 id, 0.7 wa
+MiB Mem: 7284.4 total, 362.7 free, 5031.6 used, 2199.9 buff/cache
+
+    PID USER   PR NI  VIRT  RES  SHR S %CPU %MEM TIME+ COMMAND
+   5526 amit  20  0  72.0g 805468 44928 R 158.3 10.8 1:46.04 opencode
+   4535 amit  20  0 1448.5g 259556 103040 R 83.3 3.5 2:20.00 chrome
+   3987 amit  20  0  53.2g  94324  80492 S 50.0 1.3 1:15.84 chrome
+```
+
+#### top Header Explained
+
+| Line | Meaning |
+|------|---------|
+| `load average` | System load (1, 5, 15 minutes) |
+| `Tasks` | Total/running/sleeping processes |
+| `%Cpu(s)` | CPU usage breakdown |
+| `MiB Mem` | Memory usage |
+
+#### top Keys
+
+| Key | What it does |
+|-----|-------------|
+| `q` | Quit |
+| `M` | Sort by memory |
+| `P` | Sort by CPU |
+| `1` | Show all CPU cores |
+| `k` | Kill a process |
+| `h` | Help |
+
+#### top Batch Mode (for scripts)
+
+```
+$ top -bn1 | head -10
+top - 15:07:16 up 3 min, 1 user, load average: 5.02, 2.57, 1.01
+Tasks: 397 total, 5 running, 392 sleeping, 0 stopped, 0 zombie
+...
+```
+
+---
+
+### htop - Better Process Viewer
+
+Like `top` but with colors, mouse support, and easier navigation.
+
+```
+$ htop
+```
+
+#### htop Features
+
+| Feature | Description |
+|---------|-------------|
+| Color-coded | Easy to read |
+| Mouse support | Click to interact |
+| Tree view | Press F5 to see parent/child |
+| Kill process | Select and press F9 |
+| Sort | Click column headers |
+| Scroll | Use arrow keys |
+
+#### htop Keys
+
+| Key | What it does |
+|-----|-------------|
+| `F1` or `?` | Help |
+| `F3` | Search |
+| `F4` | Filter |
+| `F5` | Tree view |
+| `F6` | Sort by |
+| `F9` | Kill process |
+| `F10` | Quit |
+
+#### htop vs top
+
+| Feature | top | htop |
+|---------|-----|------|
+| Colors | No | Yes |
+| Mouse | No | Yes |
+| Tree view | No | Yes (F5) |
+| Scroll | Limited | Full |
+| Ease of use | Basic | Easy |
+
+---
+
+### pgrep - Find Process by Name
+
+Returns the **PID** of processes matching a name.
+
+```
+$ pgrep bash
+7158
+7160
+
+$ pgrep -a bash
+7158 zsh
+7160 zsh
+```
+
+#### Common pgrep Options
+
+| Option | What it does | Example |
+|--------|-------------|---------|
+| `pgrep name` | Get PID(s) | `pgrep nginx` |
+| `pgrep -a name` | With full command | `pgrep -a python` |
+| `pgrep -l name` | With process name | `pgrep -l ssh` |
+| `pgrep -u user` | By user | `pgrep -u amit` |
+| `pgrep -c name` | Count matches | `pgrep -c chrome` |
+| `pgrep -f pattern` | Match full command line | `pgrep -f "my script"` |
+
+#### Real Output
+
+```
+$ pgrep -u amit | head -5
+1336
+1345
+1380
+1492
+1493
+
+$ pgrep -c bash
+0
+
+$ pgrep -f chrome
+3945
+3960
+3961
+3963
+```
+
+---
+
+### Process Management Cheat Sheet
+
+| Command | Purpose | Best for |
+|---------|---------|----------|
+| `ps aux` | Snapshot of all processes | Checking at a moment |
+| `top` | Real-time process viewer | Quick monitoring |
+| `htop` | Better real-time viewer | Easy monitoring |
+| `pgrep name` | Find PID by name | Scripting, killing |
+
+### Common Workflows
+
+| What you want | Command |
+|---------------|---------|
+| Find nginx PID | `pgrep nginx` or `ps aux \| grep nginx` |
+| See what's using CPU | `top` then press `P` |
+| See what's using RAM | `top` then press `M` |
+| Count all processes | `ps aux \| wc -l` |
+| Kill process by name | `pkill nginx` |
+| Find PID then kill | `kill $(pgrep nginx)` |
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -2495,6 +2729,10 @@ $ cat /etc/passwd | grep amit | cut -d: -f1,6
 | `<` | Redirect input |
 | `\|` | Pipe output to next command |
 | `tee` | Split output to screen + file |
+| `ps` | Show process status |
+| `top` | Real-time process viewer |
+| `htop` | Better process viewer |
+| `pgrep` | Find process PID by name |
 
 ---
 
