@@ -35,6 +35,10 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 27. [Systemd and Services](#27-systemd-and-services)
 28. [Service Management](#28-service-management)
 29. [Creating Custom Services](#29-creating-custom-services)
+30. [Linux Security Basics](#30-linux-security-basics)
+31. [Firewall](#31-firewall)
+32. [SSH Hardening](#32-ssh-hardening)
+33. [SELinux and AppArmor](#33-selinux-and-apparmor)
 
 ---
 
@@ -5142,6 +5146,320 @@ Alias=sshd.service
 
 ---
 
+## 30. Linux Security Basics
+
+### Security Principles
+
+| Principle | Description |
+|-----------|-------------|
+| **Least Privilege** | Give minimum permissions needed |
+| **Defense in Depth** | Multiple layers of security |
+| **Keep Updated** | Regular security patches |
+| **Monitor & Audit** | Check logs regularly |
+
+```
+1. Principle of Least Privilege
+   - Don't use root for daily tasks
+   - Use sudo only when needed
+
+2. Defense in Depth
+   - Firewall + permissions + encryption
+
+3. Keep Systems Updated
+   - sudo apt update && apt list --upgradable
+
+4. Monitor and Audit
+   - Check logs regularly
+   - Watch for suspicious activity
+```
+
+### Security Commands
+
+| Command | What it checks |
+|---------|---------------|
+| `sudo apt list --upgradable` | Available updates |
+| `sudo lastb` | Failed login attempts |
+| `who` | Logged in users |
+| `sudo ss -tlnp` | Open ports |
+| `getent group sudo` | Sudo users |
+| `find / -perm -4000` | SUID files |
+| `find / -perm -2000` | SGID files |
+
+---
+
+## 31. Firewall
+
+### UFW - Uncomplicated Firewall
+
+Easiest firewall for beginners. Default on Ubuntu/Mint.
+
+#### Basic Commands
+
+| Command | What it does |
+|---------|-------------|
+| `sudo ufw enable` | Enable firewall |
+| `sudo ufw disable` | Disable firewall |
+| `sudo ufw status` | Check status |
+| `sudo ufw status verbose` | Detailed status |
+
+#### Common Rules
+
+| Command | What it does |
+|---------|-------------|
+| `sudo ufw allow 22/tcp` | Allow SSH |
+| `sudo ufw allow 80/tcp` | Allow HTTP |
+| `sudo ufw allow 443/tcp` | Allow HTTPS |
+| `sudo ufw allow from 192.168.1.0/24` | Allow subnet |
+| `sudo ufw deny 3306/tcp` | Deny MySQL |
+| `sudo ufw delete allow 80/tcp` | Remove rule |
+
+#### App Profiles
+
+```
+sudo ufw app list              # List profiles
+sudo ufw allow OpenSSH          # Allow SSH profile
+sudo ufw allow 'Nginx Full'     # Allow Nginx (HTTP+HTTPS)
+```
+
+---
+
+### iptables
+
+The traditional Linux firewall. More complex but powerful.
+
+#### View Rules
+
+```
+sudo iptables -L              # List rules
+sudo iptables -L -n           # List with numbers
+sudo iptables -L -v           # List with counters
+```
+
+#### Add Rules
+
+```
+sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT   # Allow SSH
+sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT   # Allow HTTP
+sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT  # Allow HTTPS
+sudo iptables -A INPUT -j DROP                       # Drop all else
+```
+
+#### Save Rules
+
+```
+sudo iptables-save > /etc/iptables.rules
+sudo iptables-restore < /etc/iptables.rules
+```
+
+---
+
+### nftables
+
+The modern replacement for iptables. Better performance.
+
+#### View Rules
+
+```
+sudo nft list ruleset           # List all rules
+sudo nft list tables            # List tables
+sudo nft list table inet filter # List filter table
+```
+
+#### Add Rules
+
+```
+sudo nft add table inet filter
+sudo nft add chain inet filter input { type filter hook input priority 0; }
+sudo nft add rule inet filter input tcp dport 22 accept
+sudo nft add rule inet filter input tcp dport 80 accept
+sudo nft add rule inet filter input drop
+```
+
+#### Delete Rules
+
+```
+sudo nft flush ruleset           # Flush all rules
+sudo nft delete table inet filter # Delete table
+```
+
+---
+
+### Firewall Comparison
+
+| Feature | UFW | iptables | nftables |
+|---------|-----|----------|----------|
+| Difficulty | Easy | Complex | Medium |
+| Syntax | Simple | Old | Modern |
+| Speed | Good | Good | Best |
+| Default | Ubuntu | Older systems | Modern systems |
+
+**When to use:**
+- `UFW` = Beginners, quick setup
+- `iptables` = Legacy systems, scripts
+- `nftables` = Modern systems, complex rules
+
+---
+
+## 32. SSH Hardening
+
+Secure your SSH server.
+
+### Config File
+
+```
+/etc/ssh/sshd_config
+```
+
+### Recommended Settings
+
+```bash
+# Change default port
+Port 2222
+
+# Disable root login
+PermitRootLogin no
+
+# Use key authentication only
+PasswordAuthentication no
+
+# Limit users
+AllowUsers amit
+
+# Disable empty passwords
+PermitEmptyPasswords no
+
+# Set timeout
+ClientAliveInterval 300
+ClientAliveCountMax 2
+```
+
+### SSH Commands
+
+| Command | What it does |
+|---------|-------------|
+| `sudo nano /etc/ssh/sshd_config` | Edit config |
+| `sudo sshd -t` | Test config |
+| `sudo systemctl restart ssh` | Restart SSH |
+| `ssh-keygen -t ed25519` | Generate key pair |
+
+### SSH Security Checklist
+
+- [ ] Change default port
+- [ ] Disable root login
+- [ ] Use key authentication
+- [ ] Disable password auth (after keys work)
+- [ ] Limit allowed users
+- [ ] Set timeout
+- [ ] Install fail2ban (blocks brute force)
+
+---
+
+## 33. SELinux and AppArmor
+
+Both are **Mandatory Access Control (MAC)** systems that restrict what programs can access.
+
+### SELinux
+
+**Security-Enhanced Linux** - Developed by NSA
+
+| Feature | Value |
+|---------|-------|
+| Type | Label-based |
+| Default on | RHEL, CentOS, Fedora |
+| Complexity | Complex |
+
+#### Modes
+
+| Mode | Description |
+|------|-------------|
+| Enforcing | Rules enforced |
+| Permissive | Rules logged only |
+| Disabled | SELinux off |
+
+#### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `getenforce` | Check current mode |
+| `sestatus` | Detailed status |
+| `sudo setenforce 1` | Set Enforcing |
+| `sudo setenforce 0` | Set Permissive |
+| `restorecon -R /path` | Restore context |
+| `ausearch -m avc` | Check denials |
+
+```
+$ getenforce
+Disabled
+(SELinux usually disabled on Ubuntu/Mint)
+```
+
+---
+
+### AppArmor
+
+**Application Armor** - Path-based MAC
+
+| Feature | Value |
+|---------|-------|
+| Type | Path-based |
+| Default on | Ubuntu, Debian, SUSE |
+| Complexity | Simpler |
+
+#### Profile Modes
+
+| Mode | Description |
+|------|-------------|
+| enforce | Rules enforced |
+| complain | Rules logged only |
+| disabled | Profile off |
+
+#### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `sudo aa-status` | List profiles |
+| `sudo aa-enforce profile` | Enforce profile |
+| `sudo aa-complain profile` | Complain mode (log only) |
+| `sudo aa-disable profile` | Disable profile |
+
+```
+$ aa-status
+apparmor module is loaded.
+```
+
+---
+
+### SELinux vs AppArmor
+
+| Feature | SELinux | AppArmor |
+|---------|---------|----------|
+| Type | Label-based | Path-based |
+| Complexity | Complex | Simpler |
+| Default | RHEL/Fedora | Ubuntu/Debian |
+| Configuration | Per-process | Per-application |
+| Learning | Steep | Easier |
+
+**Both are MAC systems** - they restrict what programs can access beyond standard Unix permissions.
+
+---
+
+### Security Cheat Sheet
+
+| Task | Command |
+|------|---------|
+| Check updates | `sudo apt list --upgradable` |
+| Failed logins | `sudo lastb` |
+| Open ports | `sudo ss -tlnp` |
+| Enable UFW | `sudo ufw enable` |
+| Allow port | `sudo ufw allow 80/tcp` |
+| Check UFW | `sudo ufw status` |
+| SSH config | `/etc/ssh/sshd_config` |
+| Test SSH | `sudo sshd -t` |
+| SELinux mode | `getenforce` |
+| AppArmor profiles | `aa-status` |
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -5245,6 +5563,12 @@ Alias=sshd.service
 | `journalctl -u svc` | View service logs |
 | `systemctl daemon-reload` | Reload service config |
 | Custom service | `/etc/systemd/system/name.service` |
+| `ufw` | Uncomplicated Firewall |
+| `iptables` | Traditional firewall |
+| `nftables` | Modern firewall |
+| SSH hardening | `/etc/ssh/sshd_config` |
+| SELinux | MAC security (RHEL) |
+| AppArmor | MAC security (Ubuntu) |
 
 ---
 
