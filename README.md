@@ -24,6 +24,8 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 16. [Process Management](#16-process-management)
 17. [Process Control](#17-process-control)
 18. [System Monitoring](#18-system-monitoring)
+19. [Package Management - Debian](#19-package-management---debian)
+20. [Package Management - Red Hat](#20-package-management---red-hat)
 
 ---
 
@@ -3092,6 +3094,312 @@ tmpfs           3.6G   48M  3.6G   2% /dev/shm
 
 ---
 
+## 19. Package Management - Debian
+
+Debian-based systems (Ubuntu, Linux Mint, Debian) use **apt** and **dpkg**.
+
+### Check Your Distro
+
+```
+$ cat /etc/os-release
+NAME="Linux Mint"
+VERSION="22.3 (Zena)"
+ID=linuxmint
+ID_LIKE="ubuntu debian"
+```
+
+---
+
+### apt - Advanced Package Tool
+
+**apt** is the high-level tool. It handles dependencies automatically.
+
+#### Daily Use Commands
+
+| Command | What it does |
+|---------|-------------|
+| `sudo apt update` | Update package list |
+| `sudo apt upgrade` | Upgrade all packages |
+| `sudo apt install pkg` | Install package |
+| `sudo apt remove pkg` | Remove package |
+| `sudo apt purge pkg` | Remove package + config files |
+
+```
+$ apt --version
+apt 2.8.3 (amd64) (Mint wrapper)
+```
+
+#### Search and Info Commands
+
+| Command | What it does |
+|---------|-------------|
+| `apt search keyword` | Search for package |
+| `apt show pkg` | Show package info |
+| `apt list --installed` | List installed packages |
+| `apt list --upgradable` | List upgradable packages |
+
+#### Real Output
+
+```
+$ apt search nginx
+v   dh-sequence-nginx               -
+p   elpa-nginx-mode                 - major mode for editing nginx config files
+p   golang-github-nginxinc-nginx-pl - client for NGINX Plus API for Go (library)
+p   libnginx-mod-http-auth-pam      - PAM authentication module for Nginx
+
+$ apt show htop
+Package: htop
+Version: 3.3.0-4build1
+Priority: optional
+Section: utils
+Origin: Ubuntu
+Installed-Size: 434 kB
+Depends: libc6 (>= 2.38), libncursesw6 (>= 6)
+Homepage: https://htop.dev/
+Download-Size: 171 kB
+
+$ apt list --installed
+Listing...
+7zip/noble,now 23.01+dfsg-11 amd64 [installed]
+acl/noble-updates,now 2.3.2-1build1.1 amd64 [installed]
+adb/noble,now 1:34.0.4-1build3 amd64 [installed]
+
+$ apt list --upgradable
+Listing...
+accountsservice/noble-updates 23.13.9-2ubuntu6.1 amd64 [upgradable from: 23.13.9-2ubuntu6]
+alsa-ucm-conf/noble-updates 1.2.10-1ubuntu5.14 all [upgradable from: 1.2.10-1ubuntu5.8]
+```
+
+#### apt Workflow
+
+```
+Step 1: sudo apt update          # Get latest package list
+Step 2: sudo apt upgrade         # Install available updates
+Step 3: sudo apt install pkg     # Install new package
+```
+
+---
+
+### dpkg - Debian Package Manager
+
+**dpkg** is the low-level tool. It installs `.deb` files directly.
+
+#### Common dpkg Commands
+
+| Command | What it does |
+|---------|-------------|
+| `dpkg -l` | List all installed packages |
+| `dpkg -s pkg` | Show package status |
+| `dpkg -L pkg` | List files in package |
+| `dpkg -S /path/file` | Find which package owns file |
+| `sudo dpkg -i file.deb` | Install .deb file |
+| `sudo dpkg -r pkg` | Remove package |
+
+#### Real Output
+
+```
+$ dpkg --version
+Debian 'dpkg' package management program version 1.22.6 (amd64).
+
+$ dpkg -l | head -5
+||/ Name              Version           Architecture Description
++++-==================-=================-============-============
+ii  2to3              3.12.3-0ubuntu2.1 all          2to3 binary using python3
+ii  7zip              23.01+dfsg-11     amd64        7-Zip file archiver
+ii  accountsservice   23.13.9-2ubuntu6  amd64        query and manipulate user account
+
+$ dpkg -l | grep nginx
+ii  nginx              1.24.0-2ubuntu7.5  amd64   small, powerful, scalable web/proxy server
+ii  nginx-common       1.24.0-2ubuntu7.5  all     nginx - common files
+
+$ dpkg -s htop
+Package: htop
+Status: install ok installed
+Priority: optional
+Section: utils
+Installed-Size: 424
+Version: 3.3.0-4build1
+
+$ dpkg -L htop
+/usr/bin
+/usr/bin/htop
+/usr/share/applications/htop.desktop
+/usr/share/doc/htop/AUTHORS
+```
+
+#### dpkg Status Codes (in dpkg -l)
+
+| Code | Meaning |
+|------|---------|
+| `ii` | Installed |
+| `rc` | Removed but config remains |
+| `un` | Not installed |
+| `iU` | Unpacked but not configured |
+
+---
+
+### apt vs dpkg
+
+| Task | apt | dpkg |
+|------|-----|------|
+| Update list | `apt update` | N/A |
+| Install | `apt install pkg` | `dpkg -i pkg.deb` |
+| Remove | `apt remove pkg` | `dpkg -r pkg` |
+| List installed | `apt list --installed` | `dpkg -l` |
+| Show info | `apt show pkg` | `dpkg -s pkg` |
+| Search | `apt search pkg` | N/A |
+| Handle deps | Automatic | Manual |
+
+**Key difference:**
+- `apt` = high-level (handles dependencies)
+- `dpkg` = low-level (installs .deb files)
+
+If `dpkg -i` fails due to missing dependencies:
+```
+sudo dpkg -i package.deb      # May fail
+sudo apt install -f           # Fix dependencies
+```
+
+---
+
+## 20. Package Management - Red Hat
+
+Red Hat-based systems (RHEL, CentOS, Fedora) use **dnf/yum** and **rpm**.
+
+### dnf - Dandified YUM (Fedora/CentOS 8+/RHEL 8+)
+
+**dnf** is the modern high-level package manager.
+
+#### Common dnf Commands
+
+| Command | What it does |
+|---------|-------------|
+| `sudo dnf install pkg` | Install package |
+| `sudo dnf remove pkg` | Remove package |
+| `sudo dnf update` | Update all packages |
+| `sudo dnf search keyword` | Search package |
+| `sudo dnf info pkg` | Show package info |
+| `dnf list installed` | List installed packages |
+| `dnf list available` | List available packages |
+
+```
+sudo dnf install htop
+sudo dnf remove htop
+sudo dnf update
+sudo dnf search nginx
+sudo dnf info htop
+dnf list installed | head
+```
+
+---
+
+### yum - Yellowdog Updater Modified (RHEL/CentOS 6-7)
+
+Older version, same syntax as dnf.
+
+| Command | What it does |
+|---------|-------------|
+| `sudo yum install pkg` | Install package |
+| `sudo yum remove pkg` | Remove package |
+| `sudo yum update` | Update all packages |
+| `sudo yum search keyword` | Search package |
+| `sudo yum info pkg` | Show package info |
+| `yum list installed` | List installed packages |
+
+**Note:** `yum` is now replaced by `dnf` on modern systems. Same commands work.
+
+---
+
+### rpm - Red Hat Package Manager
+
+**rpm** is the low-level tool. It installs `.rpm` files directly.
+
+#### Common rpm Commands
+
+| Command | What it does |
+|---------|-------------|
+| `rpm -qa` | List all installed packages |
+| `rpm -q pkg` | Check if package installed |
+| `rpm -qi pkg` | Show package info |
+| `rpm -ql pkg` | List files in package |
+| `rpm -qf /path/file` | Find which package owns file |
+| `sudo rpm -ivh file.rpm` | Install .rpm file |
+| `sudo rpm -e pkg` | Remove package |
+
+```
+rpm -qa | head -10
+rpm -q htop
+rpm -qi htop
+rpm -ql htop
+rpm -qf /usr/bin/ls
+sudo rpm -ivh package.rpm
+sudo rpm -e htop
+```
+
+---
+
+### dnf/yum vs rpm
+
+| Task | dnf/yum | rpm |
+|------|---------|-----|
+| Install | `dnf install pkg` | `rpm -i pkg.rpm` |
+| Remove | `dnf remove pkg` | `rpm -e pkg` |
+| List installed | `dnf list installed` | `rpm -qa` |
+| Show info | `dnf info pkg` | `rpm -qi pkg` |
+| Search | `dnf search pkg` | N/A |
+| Handle deps | Automatic | Manual |
+
+**Key difference:** Same as Debian - high-level handles dependencies, low-level doesn't.
+
+---
+
+### Debian vs Red Hat Comparison
+
+| Task | Debian (apt/dpkg) | Red Hat (dnf/rpm) |
+|------|-------------------|-------------------|
+| Update list | `sudo apt update` | `sudo dnf update` |
+| Install | `sudo apt install pkg` | `sudo dnf install pkg` |
+| Remove | `sudo apt remove pkg` | `sudo dnf remove pkg` |
+| List installed | `apt list --installed` | `dnf list installed` |
+| Show info | `apt show pkg` | `dnf info pkg` |
+| Search | `apt search pkg` | `dnf search pkg` |
+| Install file | `sudo dpkg -i file.deb` | `sudo rpm -ivh file.rpm` |
+| List all (low) | `dpkg -l` | `rpm -qa` |
+| Package format | `.deb` | `.rpm` |
+
+---
+
+### Package Management Cheat Sheet
+
+#### Debian/Ubuntu
+
+```
+sudo apt update              # Update package list
+sudo apt upgrade             # Upgrade all packages
+sudo apt install pkg         # Install package
+sudo apt remove pkg          # Remove package
+sudo apt search keyword      # Search package
+apt show pkg                 # Show package info
+apt list --installed         # List installed
+sudo dpkg -i file.deb        # Install .deb file
+dpkg -l                      # List all installed
+```
+
+#### Red Hat/Fedora/CentOS
+
+```
+sudo dnf install pkg         # Install package
+sudo dnf remove pkg          # Remove package
+sudo dnf update              # Update all
+sudo dnf search keyword      # Search package
+dnf info pkg                 # Show package info
+dnf list installed           # List installed
+sudo rpm -ivh file.rpm       # Install .rpm file
+rpm -qa                      # List all installed
+```
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -3162,6 +3470,11 @@ tmpfs           3.6G   48M  3.6G   2% /dev/shm
 | `free -h` | Show memory usage |
 | `vmstat` | Virtual memory statistics |
 | `iostat` | Disk I/O statistics |
+| `apt` | Debian package manager (high-level) |
+| `dpkg` | Debian package manager (low-level) |
+| `dnf` | Red Hat package manager (high-level) |
+| `yum` | Red Hat package manager (older) |
+| `rpm` | Red Hat package manager (low-level) |
 
 ---
 
