@@ -32,6 +32,7 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 24. [Disk Management](#24-disk-management)
 25. [Filesystems and Mounting](#25-filesystems-and-mounting)
 26. [LVM - Logical Volume Management](#26-lvm---logical-volume-management)
+27. [Systemd and Services](#27-systemd-and-services)
 
 ---
 
@@ -4559,6 +4560,237 @@ Step 5: Remount
 
 ---
 
+## 27. Systemd and Services
+
+**systemd** is the system and service manager. It controls services, targets, and more.
+
+### What is systemd?
+
+- Manages services (background programs)
+- Manages targets (system states)
+- Replaces old SysVinit system
+- Main command: `systemctl`
+
+```
+$ systemctl status
+● amit
+    State: degraded
+    Units: 596 loaded
+     Jobs: 0 queued
+   Failed: 1 units
+  systemd: 255.4-1ubuntu8.15
+```
+
+---
+
+### Targets (formerly Runlevels)
+
+Targets define system states.
+
+#### Common Targets
+
+| Target | Equivalent | Description |
+|--------|------------|-------------|
+| `graphical.target` | runlevel 5 | GUI desktop |
+| `multi-user.target` | runlevel 3 | Text mode (no GUI) |
+| `rescue.target` | runlevel 1 | Rescue mode |
+| `emergency.target` | | Emergency shell |
+| `reboot.target` | | Reboot |
+| `poweroff.target` | | Shutdown |
+
+#### Target Commands
+
+| Command | What it does |
+|---------|-------------|
+| `systemctl get-default` | Show default target |
+| `sudo systemctl set-default target` | Change default target |
+| `sudo systemctl isolate target` | Switch target now |
+| `systemctl list-units --type=target` | List targets |
+
+#### Real Output
+
+```
+$ systemctl get-default
+graphical.target
+
+$ systemctl list-units --type=target
+  UNIT                       LOAD   ACTIVE SUB    DESCRIPTION
+  basic.target               loaded active active Basic System
+  graphical.target           loaded active active Graphical Interface
+  multi-user.target          loaded active active Multi-User System
+  network.target             loaded active active Network
+```
+
+#### Change Default Target
+
+```
+sudo systemctl set-default multi-user.target   # Boot to text mode
+sudo systemctl set-default graphical.target    # Boot to GUI
+```
+
+---
+
+### Services
+
+Services are background programs (daemons).
+
+#### Service Commands
+
+| Command | What it does |
+|---------|-------------|
+| `systemctl status service` | Check status |
+| `sudo systemctl start service` | Start service |
+| `sudo systemctl stop service` | Stop service |
+| `sudo systemctl restart service` | Restart service |
+| `sudo systemctl reload service` | Reload config |
+| `sudo systemctl enable service` | Start at boot |
+| `sudo systemctl disable service` | Don't start at boot |
+
+#### Real Output - Service Status
+
+```
+$ systemctl status nginx
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled)
+     Active: active (running) since Tue 2026-09-22 09:38:23 IST; 6h ago
+   Main PID: 1961 (nginx)
+      Tasks: 14
+     Memory: 2.3M
+     CGroup: /system.slice/nginx.service
+             ├─1961 "nginx: master process"
+             ├─1962 "nginx: worker process"
+```
+
+```
+$ systemctl status docker
+● docker.service - Docker Application Container Engine
+     Loaded: loaded (/usr/lib/systemd/system/docker.service; enabled)
+     Active: active (running) since Tue 2026-09-22 09:38:24 IST; 6h ago
+   Main PID: 1945 (dockerd)
+      Tasks: 23
+     Memory: 31.3M
+```
+
+#### Understanding Status Output
+
+| Field | Meaning |
+|-------|---------|
+| `Loaded` | Service file found |
+| `Active: active (running)` | Currently running |
+| `Active: inactive (dead)` | Stopped |
+| `Active: failed` | Failed to start |
+| `enabled` | Starts at boot |
+| `disabled` | Does not start at boot |
+
+---
+
+### List Services
+
+| Command | What it shows |
+|---------|--------------|
+| `systemctl list-units --type=service` | All services |
+| `systemctl list-units --type=service --state=running` | Running services |
+| `systemctl list-unit-files --type=service --state=enabled` | Enabled at boot |
+| `systemctl list-units --type=service --state=failed` | Failed services |
+
+#### Real Output
+
+```
+$ systemctl list-units --type=service --state=running
+  UNIT                                  LOAD   ACTIVE SUB     DESCRIPTION
+  accounts-daemon.service               loaded active running Accounts Service
+  bluetooth.service                     loaded active running Bluetooth service
+  containerd.service                    loaded active running containerd
+  cron.service                          loaded active running Regular background...
+  docker.service                        loaded active running Docker Application...
+  nginx.service                         loaded active running A high performance...
+  ssh.service                           loaded active running OpenBSD Secure Shell
+
+$ systemctl list-units --type=service --state=failed
+  UNIT                    LOAD   ACTIVE SUB    DESCRIPTION
+● casper-md5check.service loaded failed failed Verify Live ISO checksums
+```
+
+---
+
+### Service File Locations
+
+| Location | Purpose |
+|----------|---------|
+| `/etc/systemd/system/` | Custom services (you create) |
+| `/lib/systemd/system/` | Package services |
+| `/usr/lib/systemd/system/` | Package services |
+
+#### View a Service File
+
+```
+systemctl cat nginx.service
+```
+
+#### Example Service File
+
+```
+[Unit]
+Description=A high performance web server and a reverse proxy server
+Documentation=man:nginx(8)
+After=network-online.target remote-fs.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/run/nginx.pid
+ExecStartPre=/usr/sbin/nginx -t -q -g 'daemon on; master_process on;'
+ExecStart=/usr/sbin/nginx -g 'daemon on; master_process on;'
+ExecReload=/usr/sbin/nginx -s reload
+
+[Install]
+WantedBy=multi-user.target
+```
+
+---
+
+### Systemd Cheat Sheet
+
+#### Targets
+
+| Command | Purpose |
+|---------|---------|
+| `systemctl get-default` | Show default target |
+| `sudo systemctl set-default multi-user.target` | Boot to text mode |
+| `sudo systemctl set-default graphical.target` | Boot to GUI |
+| `sudo systemctl isolate target` | Switch now |
+| `systemctl list-units --type=target` | List targets |
+
+#### Services
+
+| Command | Purpose |
+|---------|---------|
+| `systemctl status service` | Check status |
+| `sudo systemctl start service` | Start |
+| `sudo systemctl stop service` | Stop |
+| `sudo systemctl restart service` | Restart |
+| `sudo systemctl reload service` | Reload config |
+| `sudo systemctl enable service` | Start at boot |
+| `sudo systemctl disable service` | Don't start at boot |
+
+#### View Services
+
+| Command | Purpose |
+|---------|---------|
+| `systemctl list-units --type=service` | All services |
+| `systemctl list-units --type=service --state=running` | Running |
+| `systemctl list-unit-files --type=service --state=enabled` | Boot enabled |
+| `systemctl cat service.service` | View service file |
+
+#### Logs
+
+| Command | Purpose |
+|---------|---------|
+| `journalctl -u service` | Service logs |
+| `journalctl -f` | Follow logs |
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -4655,6 +4887,10 @@ Step 5: Remount
 | `vgcreate` | Create volume group (LVM) |
 | `lvcreate` | Create logical volume (LVM) |
 | `lvextend` | Grow logical volume |
+| `systemctl` | Control systemd services |
+| `systemctl status` | Check service status |
+| `systemctl enable` | Start service at boot |
+| `systemctl set-default` | Change default target |
 
 ---
 
