@@ -5474,33 +5474,136 @@ This Laptop (Client)  ----SSH---->  MX Linux Laptop (Server)
 
 ---
 
-### Real Output from This Laptop
+### Real Output - Both Laptops
 
 ```
 $ ssh -V
 OpenSSH_9.6p1 Ubuntu-3ubuntu13.18, OpenSSL 3.0.13 30 Jan 2024
 
+$ whoami
+amit
+
 $ hostname -I
-10.139.53.40 192.168.122.1 172.18.0.1 ...
+192.168.29.133
 
 $ hostname
 amit
+```
 
-$ ls -la ~/.ssh/
--rw------- 1 amit amit  399 Aug  8 14:14 id_ed25519
--rw-r--r-- 1 amit amit   91 Aug  8 14:14 id_ed25519.pub
--rw------- 1 amit amit  351 Sep  8 22:20 config
--rw------- 1 amit amit 3076 Sep  8 22:04 known_hosts
+```
+$ ssh mx 'hostname; whoami; uname -r'
+amit
+amit
+6.12.107+deb13-amd64
+```
 
+```
+$ ssh mx 'grep PRETTY_NAME /etc/os-release'
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+```
+
+### Connection Summary
+
+| Laptop | User | IP | OS |
+|--------|------|-----|-----|
+| **This laptop** | amit | 192.168.29.133 | Linux Mint 22.3 |
+| **MX Linux** | amit | 192.168.29.56 | Debian 13 (MX Linux) |
+
+---
+
+### SSH Config Alias
+
+Added to `~/.ssh/config`:
+
+```
+# MX Linux Laptop
+Host mx
+    HostName 192.168.29.56
+    User amit
+    Port 22
+    IdentityFile ~/.ssh/id_ed25519
+```
+
+Now connect with just: `ssh mx`
+
+---
+
+### Fix: Password Asked Again and Again
+
+#### Problem
+
+```
+$ ssh amit@192.168.29.56
+amit@192.168.29.56's password:
+```
+
+Password keeps asking even after `ssh-copy-id`.
+
+#### Solution
+
+**Step 1:** Check your public key on this laptop:
+
+```
 $ cat ~/.ssh/id_ed25519.pub
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHP39mT/M3KlyIX1Z3tDyXdG29rHWeUfg4sVRbAXhc8z amit@amit
+```
 
-$ systemctl is-active ssh
-active
+**Step 2:** Copy key to MX Linux (enter password ONE time):
 
-$ ss -tlnp | grep :22
-LISTEN 0 4096 0.0.0.0:22 0.0.0.0:*
-LISTEN 0 4096 [::]:22 [::]:*
+```
+$ ssh-copy-id -i ~/.ssh/id_ed25519.pub amit@192.168.29.56
+/usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/home/amit/.ssh/id_ed25519.pub"
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+
+/usr/bin/ssh-copy-id: WARNING: All keys were skipped because they already exist on the remote system.
+```
+
+**Step 3:** Fix permissions on MX Linux:
+
+```
+$ ssh amit@192.168.29.56 'chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys'
+Permissions fixed!
+```
+
+**Step 4:** Test - password should NOT ask now:
+
+```
+$ ssh -o BatchMode=yes amit@192.168.29.56 'echo SUCCESS!'
+SUCCESS!
+```
+
+#### Common Reasons for Password Prompt
+
+| Reason | Fix |
+|--------|-----|
+| Key not copied | `ssh-copy-id -i ~/.ssh/id_ed25519.pub amit@192.168.29.56` |
+| Wrong permissions | `chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys` |
+| Wrong key used | Check `~/.ssh/id_ed25519.pub` exists |
+| SSH config issue | Check `PubkeyAuthentication yes` in sshd_config |
+
+---
+
+### Real Output - Connection Working
+
+```
+$ ssh mx 'echo "Connected!"; hostname; whoami'
+Connected!
+amit
+amit
+
+$ ssh mx 'uptime'
+ 17:56:10 up 23 min, 3 users, load average: 1.12, 1.09, 0.97
+
+$ ssh mx 'grep PRETTY_NAME /etc/os-release'
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+```
+
+```
+$ scp file.txt mx:~/
+file.txt
+
+$ rsync -avz ./folder/ mx:~/folder/
+sending incremental file list
 ```
 
 ---
