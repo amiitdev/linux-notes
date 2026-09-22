@@ -31,6 +31,7 @@ A complete beginner's guide to Linux - learning everything from the ground up.
 23. [Sudo](#23-sudo)
 24. [Disk Management](#24-disk-management)
 25. [Filesystems and Mounting](#25-filesystems-and-mounting)
+26. [LVM - Logical Volume Management](#26-lvm---logical-volume-management)
 
 ---
 
@@ -4341,6 +4342,223 @@ Step 6: Test
 
 ---
 
+## 26. LVM - Logical Volume Management
+
+LVM lets you manage disk space flexibly - resize, span multiple disks, and create snapshots.
+
+### LVM Architecture
+
+```
++---------------------------+
+|   Logical Volumes (LV)    |  <- You format & use these
+|   /dev/vg0/lv_data        |
++---------------------------+
+|   Volume Groups (VG)      |  <- Pool of storage
+|   vg0                     |
++---------------------------+
+|   Physical Volumes (PV)   |  <- Actual disks/partitions
+|   /dev/sda1, /dev/sdb1    |
++---------------------------+
+```
+
+### Benefits of LVM
+
+- Resize volumes **online** (no reboot)
+- Span multiple disks as one
+- Create snapshots
+- Move data between disks
+
+### Check LVM Installation
+
+```
+$ lvm version
+LVM version: 2.03.16(2) (2022-05-18)
+```
+
+Install if missing: `sudo apt install lvm2`
+
+---
+
+### Physical Volumes (PV)
+
+Physical Volumes are actual disks or partitions converted for LVM.
+
+#### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `sudo pvcreate /dev/sdX1` | Create physical volume |
+| `sudo pvdisplay` | Show PV details |
+| `sudo pvs` | Short summary |
+| `sudo pvscan` | Scan for PVs |
+
+```
+sudo pvcreate /dev/sdb1              # Convert partition to PV
+sudo pvcreate /dev/sdb1 /dev/sdc1    # Multiple disks
+sudo pvs                             # Quick summary
+sudo pvdisplay                       # Detailed info
+```
+
+---
+
+### Volume Groups (VG)
+
+Volume Groups are pools of storage made from one or more PVs.
+
+#### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `sudo vgcreate name /dev/sdX1` | Create volume group |
+| `sudo vgdisplay` | Show VG details |
+| `sudo vgs` | Short summary |
+| `sudo vgextend vg /dev/sdX1` | Add PV to VG |
+| `sudo vgreduce vg /dev/sdX1` | Remove PV from VG |
+
+```
+sudo vgcreate my_vg /dev/sdb1              # Create VG
+sudo vgcreate my_vg /dev/sdb1 /dev/sdc1    # Multiple PVs
+sudo vgs                                   # Quick summary
+sudo vgdisplay                             # Detailed info
+sudo vgextend my_vg /dev/sdc1              # Expand VG
+```
+
+---
+
+### Logical Volumes (LV)
+
+Logical Volumes are the volumes you actually format and use.
+
+#### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `sudo lvcreate -L 10G -n name vg` | Create LV (size) |
+| `sudo lvcreate -l 100%FREE -n name vg` | Create LV (all space) |
+| `sudo lvdisplay` | Show LV details |
+| `sudo lvs` | Short summary |
+| `sudo lvextend -L +5G /dev/vg/lv` | Grow LV |
+| `sudo lvreduce -L 5G /dev/vg/lv` | Shrink LV (careful!) |
+
+```
+sudo lvcreate -L 10G -n lv_data my_vg        # Create 10GB LV
+sudo lvcreate -l 100%FREE -n lv_data my_vg    # Use all free space
+sudo lvs                                      # Quick summary
+sudo lvextend -L +5G /dev/my_vg/lv_data       # Add 5GB
+sudo lvreduce -L 5G /dev/my_vg/lv_data        # Shrink to 5GB
+```
+
+---
+
+### LVM Complete Workflow
+
+#### Create and Use LVM
+
+```
+Step 1: Create Physical Volume
+  sudo pvcreate /dev/sdb1
+
+Step 2: Create Volume Group
+  sudo vgcreate my_vg /dev/sdb1
+
+Step 3: Create Logical Volume
+  sudo lvcreate -L 10G -n lv_data my_vg
+
+Step 4: Format
+  sudo mkfs.ext4 /dev/my_vg/lv_data
+
+Step 5: Mount
+  sudo mkdir -p /mnt/data
+  sudo mount /dev/my_vg/lv_data /mnt/data
+
+Step 6: Make permanent
+  sudo blkid /dev/my_vg/lv_data
+  # Add to /etc/fstab:
+  /dev/my_vg/lv_data  /mnt/data  ext4  defaults  0  2
+```
+
+---
+
+### LVM Resize Workflow
+
+#### Grow a Logical Volume (Online!)
+
+```
+Step 1: Check free space in VG
+  sudo vgs
+
+Step 2: Extend LV
+  sudo lvextend -L +5G /dev/my_vg/lv_data
+
+Step 3: Resize filesystem
+  sudo resize2fs /dev/my_vg/lv_data     # For ext4
+  sudo xfs_growfs /mnt/data             # For xfs
+```
+
+#### Shrink a Logical Volume (Careful!)
+
+```
+Step 1: Unmount
+  sudo umount /mnt/data
+
+Step 2: Check filesystem
+  sudo e2fsck -f /dev/my_vg/lv_data
+
+Step 3: Shrink filesystem FIRST
+  sudo resize2fs /dev/my_vg/lv_data 5G
+
+Step 4: Shrink LV
+  sudo lvreduce -L 5G /dev/my_vg/lv_data
+
+Step 5: Remount
+  sudo mount /dev/my_vg/lv_data /mnt/data
+```
+
+**Important:** Always shrink filesystem BEFORE shrinking LV, or you'll lose data!
+
+---
+
+### LVM Cheat Sheet
+
+#### Physical Volumes
+
+| Command | Purpose |
+|---------|---------|
+| `sudo pvcreate /dev/sdX1` | Create PV |
+| `sudo pvdisplay` | Show details |
+| `sudo pvs` | Short summary |
+| `sudo pvscan` | Scan for PVs |
+
+#### Volume Groups
+
+| Command | Purpose |
+|---------|---------|
+| `sudo vgcreate name /dev/sdX1` | Create VG |
+| `sudo vgdisplay` | Show details |
+| `sudo vgs` | Short summary |
+| `sudo vgextend vg /dev/sdX1` | Add disk |
+| `sudo vgreduce vg /dev/sdX1` | Remove disk |
+
+#### Logical Volumes
+
+| Command | Purpose |
+|---------|---------|
+| `sudo lvcreate -L 10G -n name vg` | Create LV |
+| `sudo lvdisplay` | Show details |
+| `sudo lvs` | Short summary |
+| `sudo lvextend -L +5G /dev/vg/lv` | Grow LV |
+| `sudo lvreduce -L 5G /dev/vg/lv` | Shrink LV |
+
+#### After LVM
+
+| Command | Purpose |
+|---------|---------|
+| `sudo mkfs.ext4 /dev/vg/lv` | Format |
+| `sudo mount /dev/vg/lv /mnt` | Mount |
+| `sudo resize2fs /dev/vg/lv` | Resize ext4 |
+
+---
+
 ## Summary
 
 | Concept | Key Takeaway |
@@ -4433,6 +4651,10 @@ Step 6: Test
 | `umount` | Detach filesystem |
 | `mkfs.*` | Format filesystem (ext4/xfs/btrfs) |
 | `/etc/fstab` | Auto-mount at boot |
+| `pvcreate` | Create physical volume (LVM) |
+| `vgcreate` | Create volume group (LVM) |
+| `lvcreate` | Create logical volume (LVM) |
+| `lvextend` | Grow logical volume |
 
 ---
 
